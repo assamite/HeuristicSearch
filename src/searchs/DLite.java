@@ -107,7 +107,8 @@ public class DLite extends AbstractSearch {
 		this.expanded.put(this.goalNode.getHashKey(), this.goalNode);
 		this.expanded.put(this.rootNode.getHashKey(), this.rootNode);
 			
-		while (!this.isCancelled() || !(this.position[0] == this.goal[0] && this.position[1] == this.goal[1])) {
+		while (!(this.position[0] == this.goal[0] && this.position[1] == this.goal[1])) {
+			if (this.isCancelled()) break;
 			this.robot.clearSearched();
 			int key = Node.getHashKeyFor(this.position);
 			if (this.expanded.containsKey(key)) {
@@ -117,16 +118,19 @@ public class DLite extends AbstractSearch {
 				System.out.println("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 			}
 			this.computeShortestPath(this.rootNode, this.goalNode);
-			System.out.println("computed path");
-			this.constructPath();
-			this.publish(this.path);
-			// Wait until changes are observed.
-			try {
-				this.wait();
+			
+			if (!this.isCancelled()) {
+				this.constructPath();
+				this.publish(this.path);
+			
+				// Wait until changes are observed.
+				try {
+					this.wait();
+				}
+				catch (InterruptedException e) {
+					// TODO: notify something about this
+				}	
 			}
-			catch (InterruptedException e) {
-				// TODO: notify something about this
-			}	
 		}
 	}
 	
@@ -140,8 +144,8 @@ public class DLite extends AbstractSearch {
 		if (this.open.isEmpty()) return;
 		
 		System.out.println(this.open.peek().getRhs() + " " + r.getRhs());
-		while (this.open.peek().compareTo(r) < 0 ||
-				r.getRhs() != r.getG()) {
+		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() != r.getG())) {
+			if (this.isCancelled()) break;
 			DNode dn = this.open.remove();
 			System.out.println(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1] + " " + dn.getRhs() + " " + r.getRhs());
 			this.expanded.put(dn.getHashKey(), dn);
