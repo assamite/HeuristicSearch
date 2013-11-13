@@ -9,7 +9,7 @@ the UI (most importantly menubar) may be seen in Linux and Windows.**
 Allows the user to load jpg/png images as maps, converts them to grayscale *in memory* 
 and uses the resulting grayscale image as the search space for algorithms. Each
 pixel is a node and the cost of travelling into that node is depended by the darkness
-of the pixel; the darker the more it costs. Only left, rigt, up, down movements are 
+of the pixel; the darker the more it costs. Only left, right, up, down movements are 
 currently allowed.
 
 Currently application's main resides in src/ui/UILauncher. 
