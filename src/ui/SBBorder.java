@@ -20,7 +20,7 @@ import javax.swing.border.AbstractBorder;
  * @author slinkola
  *
  */
-public class IEBorder extends AbstractBorder {
+public class SBBorder extends AbstractBorder {
 	/** Default serialization UID. */
 	private static final long serialVersionUID = 1L;
 	

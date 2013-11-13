@@ -21,16 +21,13 @@ import ui.UIScheme;
 import util.Calc;
 import util.Point;
 /**
- * Light wrapper to contain robot's location, orientation, observations and 
- * path it has traveled (sometimes observations might not be made exactly in the 
- * same place as the robot). Implements IERobotInterface for easy message 
- * handling on both platforms.
+ * Search robot, which owns the search algorithm and communicates with the 
+ * search worker while it is running.
  * 
  * @author slinkola
  *
  */
-public class Robot {
-	
+public class SearchBot {	
 	/** Serialization UID. */
 	private static final long serialVersionUID = 1L;
 	/** Currently traveled path as list of x,y pairs. */
@@ -46,7 +43,7 @@ public class Robot {
 	/** Current map of the robot as a greyscale image's raster. Darker shade 
 	 *  means more time spent on traveling to the pixel. */
 	private Raster map;
-	
+	/** Current heuristic search type. */
 	private SearchType searchType = SearchType.ASTAR;
 	/** Current heuristic search algorithm instance for the robot. */
 	private AbstractSearch search = null;
@@ -61,10 +58,10 @@ public class Robot {
 	/** Has searhing for path started. At some point after search is started 
 	 * robot may be also travelling. */
 	public boolean isSearchStarted = false;
-	
+	/** Color of the drawn searched nodes. */
 	private int[] searchedColor = {255, 0, 255, 40};
 	
-	public Robot(BufferedImage map, SearchType searchType) {
+	public SearchBot(BufferedImage map, SearchType searchType) {
 		this.map = map.getData();	
 		this.searchType = searchType;
 		//EventHandler.printInfo(this.map.getMinX() + " " + this.map.getMinY());
@@ -77,7 +74,7 @@ public class Robot {
 	 * @param map map for the robot as greyscale image.
 	 * @param searchType Type of heuristic search from Search enum.
 	 */
-	public Robot(int[] root, int[] goal, BufferedImage map, SearchType searchType) {
+	public SearchBot(int[] root, int[] goal, BufferedImage map, SearchType searchType) {
 		this.root = root;
 		this.goal = goal;
 		this.position = root;
@@ -109,24 +106,6 @@ public class Robot {
  			EventHandler.printInfo("Robot set up " + this.search.getName() +".");
  		}
  	}
- 	
- 	/** Callback for SwingWorker-subclass search algorithm's done-function. */
- 	public void setPlannedPath(ArrayList<Node> path) {
- 		if (this.isTravelling) {
- 			this.travelTimer.cancel();
- 			this.travelTimer.purge();
- 		}
- 		if (path != null) {
- 			this.plannedPath = path;
- 			String msg = String.format("To goal: length %d, cost %.2f", 
- 					path.size(), path.get(path.size() - 1).getG());
- 			EventHandler.updateRobot(this, msg);
- 			this.startTravel(100);
- 		}
- 		else {
- 			EventHandler.updateRobot(this, "No path found!");
- 		}
- 	}
 	
 	/** 
 	 * Set updated map of the robot's surroundings and replan the route from 
@@ -146,12 +125,41 @@ public class Robot {
 		if (this.isSearchStarted) this.replan(changed);
 	}
 	
-	public synchronized void updateSearched(List<Object> chunks) {
-		for (Object o: chunks) this.searched.add((Node)o);
+ 	/** Callback for SwingWorker-subclass search algorithm's done-function. */
+ 	public void setPlannedPath(ArrayList<Node> path) {
+ 		/*
+ 		if (this.isTravelling) {
+ 			this.travelTimer.cancel();
+ 			this.travelTimer.purge();
+ 		}
+ 		*/
+ 		if (path != null) {
+ 			this.plannedPath = path;
+ 			int idx = this.searchType == SearchType.ASTAR ? path.size() - 1 : 0;
+ 			EventHandler.printInfo("Searched to goal " + this.searched.size());
+ 			String msg = String.format("To goal: length %d, cost %.2f", 
+ 					path.size(), path.get(idx).getG());
+ 			EventHandler.updateRobot(this, msg);
+ 			this.startTravel(100);
+ 		}
+ 		else {
+ 			EventHandler.updateRobot(this, "No path found!");
+ 		}
+ 	}
+	
+	/**
+	 * Update currently searched nodes.
+	 * @param chunks chunks of Node objects send by process()-method of current
+	 * search.
+	 */
+	public void updateSearched(List<Object> chunks) {
+		for (Object o: chunks) {
+			if (o != null) this.searched.add((Node)o);
+		}
 		EventHandler.updateRobot(this, null);
 	}
 	
-	public void clearSearched() {
+	public synchronized void clearSearched() {
 		this.searched.clear();
 		EventHandler.updateRobot(this, null);
 		

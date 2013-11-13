@@ -1,9 +1,13 @@
 package searchs;
 
-import robot.Robot;
+import robot.SearchBot;
 
-/** Class which creates all the searchs. Ugh, first time I'm using factory
- * abstraction. */
+/**
+ * Class which creates all the searchs. First time I use factory abstraction. 
+ * I feel dirty.
+ * @author slinkola
+ *
+ */
 public class SearchFactory {
 	/**
 	 * Create new search instance.
@@ -13,7 +17,7 @@ public class SearchFactory {
 	 * @param goal goal of the search
 	 * @return new search instance as defined by the parameters.
 	 */
-	public static AbstractSearch createSearch(SearchType searchType, Robot r, int[] root, int[] goal) {
+	public static AbstractSearch createSearch(SearchType searchType, SearchBot r, int[] root, int[] goal) {
 		switch (searchType) {
 			case ASTAR: 
 				return new AStar(r, root, goal);
@@ -22,6 +26,7 @@ public class SearchFactory {
 			case ARA:
 				return new ARA(r, root, goal);
 			case ADSTAR:
+				// Not implemented yet.
 			default:
 				return null;
 		}	

@@ -22,7 +22,7 @@ Current Implementation Status
 | --------- | ---------- | ----------- | -----------------------------------| 
 | A*        | ********** | DONE        |                                    |
 | D* Lite   | ******     | started     | some peculiar bug with replanning  | 
-| ARA*      | ******     | started     |                                    |
+| ARA*      | *********  | polishing   | need to check pq consistency       |
 | AD*       |            | not started |                                    |
 
 Some other algorithms might be implemented at *some* point in the (very distant) future (in the galaxy very far away).

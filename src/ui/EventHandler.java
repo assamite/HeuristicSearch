@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.imageio.ImageIO;
 
-import robot.Robot;
+import robot.SearchBot;
 import searchs.Node;
 import searchs.SearchType;
 
@@ -27,12 +27,7 @@ import searchs.SearchType;
 public class EventHandler {
 	
 	private static ReentrantLock infoLock = new ReentrantLock();
-	
-	/** Send bluetooth observation message to currently connected device. */
-	public static void observe() {
-		
-	}
-	
+
 	/** Load image map, convert it to gray scale and assemble it to UI. */
 	public static boolean loadMap(File file) {
 		BufferedImage map;
@@ -50,7 +45,7 @@ public class EventHandler {
 		op.filter(map, map);
 		MainUI.map.setMapImage(map);
 		SearchType s = MainUI.util.control.getSelectedSearchType();
-		MainUI.map.updateRobot(new Robot(map, s));
+		MainUI.map.updateRobot(new SearchBot(map, s));
 		return true;
 	}
 	
@@ -58,30 +53,38 @@ public class EventHandler {
 	public static void clearMap() {
 		int w = MainUI.map.mapImage.getWidth();
 		int h = MainUI.map.mapImage.getHeight();
-		MainUI.map.closedImage = new BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR);
+		MainUI.map.clearSearchedImage();
 		SearchType s = MainUI.util.control.getSelectedSearchType();
-		MainUI.map.updateRobot(new Robot(MainUI.map.mapImage, s));	
+		MainUI.map.updateRobot(new SearchBot(MainUI.map.mapImage, s));	
 	}
 	
-	/** Update robot's map. */
+	/** Update robot's map with img and tell robot that the line between
+	 * drawn [0, 1] and [2, 3] was drawn so that it knows to search for
+	 * differencies on images from that section. 
+	 * 
+	 * @param img map from which robot gets its Raster data
+	 * @param drawn atleast 4-length array from which line is extracted as
+	 * {x1, y1, x2, y2..}, rest of the array is not taken into account.
+	 * */
 	public static void setRobotMap(BufferedImage img, int[] drawn) {
-		MainUI.map.clearClosedImage();
+		MainUI.map.clearSearchedImage();
 		MainUI.map.robot.setMap(img, drawn);
 	}
 	
 	/**
 	 * Tell UI to update robot and show message on info panel.
-	 * @param r
-	 * @param msg
+	 * @param r Robot to update
+	 * @param msg alternative message, if null or "" is not shown.
 	 */
-	public static void updateRobot(Robot r, String msg) {
+	public static void updateRobot(SearchBot r, String msg) {
 		MainUI.map.updateRobot(r);
 		if (msg != null && msg.length() != 0)
 			EventHandler.printInfo(msg);
 	}
 	
 	/** Print info text in UI. Text should not contain any new line characters
-	 * or unexpected behaviour may happen. */
+	 * or unexpected behaviour may happen. All printing is done inside infoLock.
+	 * */
 	public static void printInfo(String info) {
 		while (infoLock.isLocked()) { }
 		infoLock.lock();
@@ -99,16 +102,19 @@ public class EventHandler {
 		MainUI.map.repaint();
 	} 
 	
+	/** Start robot's current search. */
 	public static void startSearch() {
 		MainUI.map.robot.startSearch();
 	}
 	
+	/** Clear robot's current search. */
 	public static void clearSearch() {
 		MainUI.map.robot.clearSearch();
-		MainUI.map.clearClosedImage();
+		MainUI.map.clearSearchedImage();
 		MainUI.map.repaint();
 	}
 	
+	/** Change search algorithm to s. */
 	public static void changeSearchType(SearchType s) {
 		MainUI.map.robot.changeSearchType(s);
 	}

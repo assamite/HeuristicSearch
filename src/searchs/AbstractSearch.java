@@ -7,7 +7,7 @@ import java.util.List;
 
 import javax.swing.SwingWorker;
 
-import robot.Robot;
+import robot.SearchBot;
 
 /**
  * Abstract super class for all the heuristic searchs to obtain coherent 
@@ -33,11 +33,11 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	/** Path planned by A*. */
 	protected ArrayList<Node> path = null;
 	/** Robot which is executing the search. */
-	protected Robot robot = null;
+	protected SearchBot robot = null;
 	/** Is this search currently running. */
 	protected boolean isRunning = false;
 	
-	public AbstractSearch(Robot r) {
+	public AbstractSearch(SearchBot r) {
 		this.robot = r;
 		this.root = this.robot.getRoot();
 		this.goal = this.robot.getGoal();
@@ -47,7 +47,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 		this.h = this.map.getHeight();
 	}
 	
-	public AbstractSearch(Robot r, int[] root, int[] goal) {
+	public AbstractSearch(SearchBot r, int[] root, int[] goal) {
 		this.robot = r;
 		this.root = root;
 		this.goal = goal;

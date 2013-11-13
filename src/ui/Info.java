@@ -26,7 +26,7 @@ public class Info extends JPanel {
 	/** list of actual line lengths in infoText. */
 	private ArrayList<Integer> lines = new ArrayList<Integer>();
 	/** Maximum number of text rows to show. */
-	private int maxRows = 34;
+	private int maxRows = 42;
 	/** Line length of infoText. */
 	private int lineLength = 40;
 	
@@ -66,7 +66,6 @@ public class Info extends JPanel {
 			}
 			this.infoText.append(s + "\n");
 			this.lines.add(s.length());
-
 		}
 		this.infoText.repaint();
 	}

@@ -31,14 +31,13 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 
-import robot.Robot;
+import robot.SearchBot;
 import searchs.Node;
 
 
 /**
- * Map part of main UI for showing robot's observations and place on PC. Upon 
- * creation Map is  translated in a way that point (0, 0) becomes at the center
- * of the view. 
+ * Map part of main UI for showing search bot's current map and its planned 
+ * travel route.  
  * 
  * @author slinkola
  *
@@ -60,11 +59,11 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 	/** Background map layer. Shows current image map. */
 	private JPanel bgMap = new JPanel();
 	/** Currently monitored robot. */
-	public Robot robot;
+	public SearchBot robot;
 	/** Current map. */
 	public BufferedImage mapImage;
 	/** Current closed list for search. */
-	public BufferedImage closedImage = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
+	public BufferedImage searchedImage = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
 	/** Drawing line start. */
 	private int[] lineStart = {0, 0};
 	/** Color space for drawing. */
@@ -101,7 +100,6 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 		// Init background map
 		this.bgMap.setBounds(mapRect);
 		this.bgMap.setOpaque(false);
-		//this.setBackground(UIScheme.BLUE_L);
 		this.layers.add(this.bgMap, new Integer(0));
 		// Init map.
 		this.map.setBounds(mapRect);
@@ -123,28 +121,26 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 	}
 	
 	/**
-	 * Set mapImage and create new closedImage. 
+	 * Set mapImage and create new searchedImage. 
 	 * @param img
 	 */
 	public void setMapImage(BufferedImage img) {
 		this.mapImage = img;
 		Graphics gc = this.bgMap.getGraphics();
 		gc.drawImage(img, 0, 0, null);
-		this.clearClosedImage();
+		this.clearSearchedImage();
 		this.repaint();
-		
-		
 	}
 	
-	/** Create new closedImage */
-	public void clearClosedImage() {
+	/** Create new searchedImage for drawing searched nodes. */
+	public void clearSearchedImage() {
 		int w = this.mapImage.getWidth();
 		int h = this.mapImage.getHeight();
-		this.closedImage = new BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR);
+		this.searchedImage = new BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR);
 	}
 	
 	/** Change or reset this map's robot and draw robot's information on map. */
-	public void updateRobot(Robot r) {
+	public void updateRobot(SearchBot r) {
 		this.robot = r;
 		this.repaint();
 	}
@@ -158,13 +154,13 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 		gc.dispose();
 	}
 	
-	/** Draw searched node's. */ 
+	/** Draw currently searched nodes. */ 
 	private void drawSearched() {
 		if (this.robot != null) {
-			this.robot.drawSearched(this.closedImage.getRaster());
+			this.robot.drawSearched(this.searchedImage.getRaster());
 		}
 		Graphics2D gc = (Graphics2D)this.map.getGraphics();
-		gc.drawImage(this.closedImage, 0, 0, null);
+		gc.drawImage(this.searchedImage, 0, 0, null);
 		gc.dispose();
 	}
 	
@@ -179,15 +175,15 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 	}
 
 	@Override
-	/** */
+	/** Start line drawing. */
 	public void mousePressed(MouseEvent e) {
 		lineStart[0] = e.getX();
 		lineStart[1] = e.getY();
-
 	}
 	
 	@Override
-	/**  */
+	/** Draw line between the point where mouse was pressed and the point where 
+	 * mouse was released. */
 	public void mouseReleased(MouseEvent e) {
 		int x = e.getX(); int y = e.getY();
 		if (x == lineStart[0] && y == lineStart[1]) return;
@@ -201,19 +197,6 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
         
         EventHandler.setRobotMap(this.mapImage, new int[] {lineStart[0], lineStart[1], x, y});
 	}
-	
-
-	@Override
-	/** */
-	public void mouseDragged(MouseEvent e) {
-		if (e.getButton() == 1) {
-
-		}
-	}
-	
-	// MouseMotionListener and MouseListener dummys for implementing interface.
-	@Override
-	public void mouseMoved(MouseEvent e) {}
 	
 	@Override
 	public void mouseClicked(MouseEvent e) {
@@ -229,6 +212,13 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 		
 	}
 
+	// MouseMotionListener and MouseListener dummys for implementing interface.
+	@Override
+	public void mouseDragged(MouseEvent e) {}
+	
+	@Override
+	public void mouseMoved(MouseEvent e) {}
+	
 	@Override
 	public void mouseEntered(MouseEvent e) {}
 
@@ -236,7 +226,5 @@ public class Map extends JPanel implements MouseListener, MouseMotionListener,
 	public void mouseExited(MouseEvent e) {}
 
 	@Override
-	public void actionPerformed(ActionEvent e) {
-		String ac = e.getActionCommand();
-	}
+	public void actionPerformed(ActionEvent e) { }
 }

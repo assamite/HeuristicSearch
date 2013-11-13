@@ -59,7 +59,7 @@ public class UIScheme {
 	
 	public static final Border etchedBorder = BorderFactory.createEtchedBorder(UIScheme.BLUE_M, UIScheme.BLUE_VD);
 	public static final Border BUTTON_BORDER = new LineBorder(UIScheme.BLUE_VD, 1, false);
-	public static final Border IEBORDER = new IEBorder();
+	public static final Border IEBORDER = new SBBorder();
 	
 	public static final Border createTitledBorder(String title) {
 		return new TitledBorder(UIScheme.IEBORDER, 

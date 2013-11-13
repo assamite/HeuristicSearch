@@ -5,8 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import robot.Robot;
+import robot.SearchBot;
 
+/**
+ * D* Lite search which uses current knowledge of the nodes in replanning phase,
+ * when new edge costs are observed.
+ * @author slinkola
+ *
+ */
 public class DLite extends AbstractSearch {
 	/** Current open list, contains exactly the inconsistent states. */
 	protected PriorityQueue<DNode> open = new PriorityQueue<DNode>();
@@ -20,7 +26,7 @@ public class DLite extends AbstractSearch {
 	 * changes are detected. */
 	protected DNode rootNode;
 	
-	public DLite(Robot r) {
+	public DLite(SearchBot r) {
 		super(r);
 		this.rootNode = new DNode(
 				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);
@@ -29,7 +35,7 @@ public class DLite extends AbstractSearch {
 		this.name = "D* Lite";
 	}
 	
-	public DLite(Robot r, int[] root, int[] goal) {
+	public DLite(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
 		this.rootNode = new DNode(
 				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);

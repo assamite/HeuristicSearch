@@ -6,8 +6,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 
-import robot.Robot;
+import robot.SearchBot;
 
+/**
+ * Basic A* search.
+ * 
+ * @see https://en.wikipedia.org/wiki/A*
+ * @author slinkola
+ *
+ */
 public class AStar extends AbstractSearch {
 	/** Current open list. */
 	PriorityQueue<Node> open = new PriorityQueue<Node>();
@@ -16,12 +23,12 @@ public class AStar extends AbstractSearch {
 	/** Closed nodes list. */
 	private HashMap<Integer, Node> closed = new HashMap<Integer, Node>();
 
-	public AStar(Robot r) {
+	public AStar(SearchBot r) {
 		super(r);
 		this.name = "A*";
 	}
 	
-	public AStar(Robot r, int[] root, int[] goal) {
+	public AStar(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
 		this.name = "A*";
 	}
@@ -68,7 +75,7 @@ public class AStar extends AbstractSearch {
 			Node n = this.open.remove();
 			if (this.isGoal(n)) {
 				found = true;
-				gn = n;
+				this.constructPath(n);
 				continue;
 			}
 			this.closed.put(n.getHashKey(), n);
@@ -95,19 +102,6 @@ public class AStar extends AbstractSearch {
 			publish(n);
 		}
 		
-		if (gn != null) {
-			//EventHandler.printInfo(String.format("Goal node found with %d expansions", expanded));
-			this.path = new ArrayList<Node>();
-			this.path.add(gn);
-			while (gn.prev != null) {
-				this.path.add(gn.prev);
-				gn = gn.prev;
-			}
-			Collections.reverse(this.path);
-		}
-		else {
-			this.path = null;	
-		}
 	}
 	
 	/**
@@ -127,5 +121,26 @@ public class AStar extends AbstractSearch {
 			childs[i].prev = n;
 		}
 		return childs;
+	}
+	
+	/**
+	 * Construct path from root to goal. Is no goal node is given, current
+	 * path is set to null;
+	 * @param goalNode goal node from which the path is started to construct.
+	 */
+	protected void constructPath(Node goalNode) {
+		if (goalNode != null) {
+			//EventHandler.printInfo(String.format("Goal node found with %d expansions", expanded));
+			this.path = new ArrayList<Node>();
+			this.path.add(goalNode);
+			while (goalNode.prev != null) {
+				this.path.add(goalNode.prev);
+				goalNode = goalNode.prev;
+			}
+			Collections.reverse(this.path);
+		}
+		else {
+			this.path = null;	
+		}
 	}
 }

@@ -61,6 +61,7 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 		JPanel controlWrapper = new JPanel();
 		controlWrapper.setOpaque(false);
 		
+		// Basic search and clear buttons
 		JPanel searchButtonWrapper = new JPanel();
 		searchButtonWrapper.setLayout(new GridLayout(1, 0, 20, 0));
 		searchButtonWrapper.setPreferredSize(new Dimension(270, 30));
@@ -70,13 +71,13 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 		UIScheme.initButton(this.clearSearchButton, 125, 30, searchButtonWrapper, "Clear", this);
 		controlWrapper.add(searchButtonWrapper);
 
+		// Search type buttons
 		JPanel searchTypeWrapper = new JPanel();
 		searchTypeWrapper.setLayout(new GridLayout(2, 2, 0, 0));
 		searchTypeWrapper.setPreferredSize(new Dimension(280, 70));
 		searchTypeWrapper.setBounds(0, 0, this.width, 70);
 		searchTypeWrapper.setOpaque(false);
 		searchTypeWrapper.setBorder(UIScheme.createTitledBorder("Search Type"));
-		
 		this.searchTypeButtons.add(this.AStarButton);
 		this.searchTypeButtons.add(this.DLiteButton);
 		this.searchTypeButtons.add(this.ARAButton);
@@ -88,13 +89,13 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 		UIScheme.initButton(this.ADStarButton, 55, 25, searchTypeWrapper, "AD*", this);
 		controlWrapper.add(searchTypeWrapper);
 		
+		// Color slider
 		JPanel sliderWrapper = new JPanel();
 		sliderWrapper.setPreferredSize(new Dimension(280, 70));
 		sliderWrapper.setLayout(new BorderLayout());
 		sliderWrapper.setBounds(0, 0, this.width, 70);
 		sliderWrapper.setOpaque(false);
-		sliderWrapper.setBorder(UIScheme.createTitledBorder("Paint Color"));
-		
+		sliderWrapper.setBorder(UIScheme.createTitledBorder("Paint Color"));	
 		this.colorSlider.setPreferredSize(new Dimension(255, 50));
 		this.colorSlider.setSnapToTicks(true);
 		this.colorSlider.setOpaque(false);
@@ -111,6 +112,7 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 		sliderWrapper.add(this.colorSlider, BorderLayout.CENTER);
 		controlWrapper.add(sliderWrapper);
 		
+		// Add 'em all.
 		this.add(controlWrapper);
 	}
 	
@@ -125,7 +127,6 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 	public void setControlsEnabled(boolean enabled) {
 		this.startSearchButton.setEnabled(enabled);
 		this.clearSearchButton.setEnabled(enabled);
-		//this.observeButton.setEnabled(enabled);
 	}
 	
 	public void actionPerformed(ActionEvent e) { 
@@ -157,6 +158,7 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 		MainUI.map.requestFocusInWindow();
 	}
 	
+	/** Get currently selected SearchType. */
 	public SearchType getSelectedSearchType() {
 		String actionCommand = this.searchTypeButtons.getSelection().getActionCommand();
 		if (actionCommand == "A*") return SearchType.ASTAR;
