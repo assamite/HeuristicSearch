@@ -1,7 +1,7 @@
 Heuristic Search
 ===============
 
-Different heuristic search algorithms implemented in java. Very much work in progress.
+Different heuristic search algorithms implemented in Java. Very much work in progress.
 
 **The application is currently developed only with OS X, so some inconsistencies with
 the UI (most importantly menubar) may be seen in Linux and Windows.**
@@ -27,5 +27,21 @@ Current Implementation Status
 
 Some other algorithms might be implemented at *some* point in the (very distant) future (in the galaxy very far away).
 
+References
+----------
+[A\*, our basic work horse as explained in wikipedia.](https://en.wikipedia.org/wiki/A*)
 
-- Simo Linkola // slinkola (a) cs.helsinki.fi
+[Likhachev, Gordon and Thrun: ARA\*: Anytime A\* with Provable Bounds on Sub-Optimality]
+(http://machinelearning.wustl.edu/mlpapers/paper_files/NIPS2003_CN03.pdf) Basic ARA\* formulation.
+
+
+[Koenig and Likhachev: Fast Replanning for Navigation in Unknown Terrain]
+(http://pub1.willowgarage.com/~konolige/cs225b/dlite_tro05.pdf) D\* Lite formulation which is built on top of LPA\*.
+
+[Likhachev, *et al*.: Anytime Dynamic A*: An Anytime, Replanning Algorithm]
+(https://www.cs.cmu.edu/~maxim/files/ad_icaps05.pdf) - AD\* formulation which builds on top of D\* Lite and ARA\*.
+
+[Likhachev, *et al*.: Anytime search in dynamic graphs]
+(http://www.cs.helsinki.fi/u/bmmalone/heuristic-search-fall-2013/Likhachev2008.pdf) More thorough formulation of AD\*.
+
+\-\- Simo Linkola // *slinkola (a) cs.helsinki.fi*
