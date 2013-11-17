@@ -22,28 +22,28 @@ import ui.EventHandler;
  */
 public class ARA extends AbstractSearch {
 	/** Current open list, which uses private comparator class. */
-	PriorityQueue<ARANode> open = new PriorityQueue<ARANode>();
+	PriorityQueue<EpsNode> open = new PriorityQueue<EpsNode>();
 	/** Helper data structure for ease of referring nodes in open list. */
 	//HashMap<Integer, Node> openMap = new HashMap<Integer, Node>();
 	/** All extended states. */
-	private HashMap<Integer, ARANode> expanded = new HashMap<Integer, ARANode>();
+	private HashMap<Integer, EpsNode> expanded = new HashMap<Integer, EpsNode>();
 	/** Current goal node. */
-	protected ARANode goalNode;
+	protected EpsNode goalNode;
 	/** Current root node. */
-	protected ARANode rootNode;
+	protected EpsNode rootNode;
 	/** Current epsilon. */
-	protected double e = 5;
+	protected double e = 4;
 
 	public ARA(SearchBot r) {
 		super(r);
-		this.rootNode = new ARANode(this.root, Double.MAX_VALUE / 2, 0, this.e);
-		this.goalNode = new ARANode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
+		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
+		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
 	}
 	
 	public ARA(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
-		this.rootNode = new ARANode(this.root, Double.MAX_VALUE / 2, 0, this.e);
-		this.goalNode = new ARANode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
+		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
+		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
 	}
 	
 	@Override
@@ -55,6 +55,7 @@ public class ARA extends AbstractSearch {
 			if (o instanceof ArrayList<?>) {
 				try {
 					paths.add((ArrayList<Node>)o); 
+					EventHandler.printInfo("ARA* reducing epsilon.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!
@@ -106,8 +107,8 @@ public class ARA extends AbstractSearch {
 	/** Execute ARA* search and publish closed list additions and path 
 	 * improvements as intermediate results. 
 	 */
-	protected synchronized void search() {	
-		this.open = new PriorityQueue<ARANode>();
+	protected void search() {	
+		this.open = new PriorityQueue<EpsNode>();
 		this.open.add(this.goalNode);
 		//this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
 		this.improvePath();
@@ -117,29 +118,17 @@ public class ARA extends AbstractSearch {
 		while (this.e > 1.01) {
 			this.robot.clearSearched();
 			this.e = this.e - 0.5;
-			EventHandler.printInfo("ARA* reducing epsilon to: " + this.e);
 			// Ugh. This is quite stupid, but has to be done so that the
 			// priorities get updated
-			PriorityQueue<ARANode> newPQ = new PriorityQueue<ARANode>();
-			for (ARANode n: this.open) { 
+			PriorityQueue<EpsNode> newPQ = new PriorityQueue<EpsNode>();
+			for (EpsNode n: this.open) { 
 				n.setE(this.e);
 				newPQ.add(n); 
 			}
 			this.open = newPQ;
-			/*
-			ARANode[] test = this.open.toArray(new ARANode[this.open.size()]);
-			System.out.println(test.length);
-			for (int i = 0; i < test.length -1; i++) {
-				ARANode n1 = test[i];
-				ARANode n2 = test[i +1];
-				if (n1.getKey() > n2.getKey()) {
-					System.out.println(i + " " + n1.getKey() + " " + n2.getKey());
-				} 
-			}
-			*/
-			
+
 			for (int key: this.expanded.keySet()) {
-				ARANode an = this.expanded.get(key);
+				EpsNode an = this.expanded.get(key);
 				if (an.isInconsistent()) { 
 					an.setOpen();
 					this.open.add(an);
@@ -151,7 +140,14 @@ public class ARA extends AbstractSearch {
 			}
 			this.improvePath();
 			this.constructPath();
-			this.publish(this.path);
+			//if (this.e == 1.0) 
+				this.publish(this.path);
+				
+			// testing
+			try {
+				Thread.sleep(150);
+			}
+			catch (InterruptedException e) { }
 		}
 		
 		EventHandler.printInfo("ARA* stopped search.");
@@ -165,7 +161,7 @@ public class ARA extends AbstractSearch {
 		while (this.open.peek().compareTo(this.rootNode) < 0) {
 			//ARANode r = this.rootNode;
 			//System.out.println(r.xy[0] + " " + r.xy[1] + " " + r.getG() + " " + e*r.getH());
-			ARANode node = this.open.remove();
+			EpsNode node = this.open.remove();
 			//System.out.println(node.xy[0] + " " + node.xy[1] + " " + node.getG() + " " + e*node.getH());
 			node.setClosed();
 			publishArray[i] = node;
@@ -177,7 +173,7 @@ public class ARA extends AbstractSearch {
 				i++;
 			}
 
-			for (ARANode n: this.pred(node)) {
+			for (EpsNode n: this.pred(node)) {
 				if (n.g > this.getCost(this.map, node.xy) + node.g) {
 					n.g = this.getCost(this.map, node.xy) + node.g;
 					n.prev = node;
@@ -185,7 +181,6 @@ public class ARA extends AbstractSearch {
 						n.setOpen();
 						n.setE(this.e);
 						this.open.add(n);
-						//this.openMap.put(n.getHashKey(), n);
 					}
 					else {
 						n.setInconsistent();
@@ -194,10 +189,11 @@ public class ARA extends AbstractSearch {
 			}
 		}
 		if (i != 0 && i < publishArray.length - 1) {
-			for (int j = i + 1; j < publishArray.length; j++) {
-				publishArray[j] = null;
-			}
+			Node[] a = new Node[i];
+			for (int j = 0; j < i; j++) a[j] = publishArray[j];
+			this.publish((Object[])a);
 		}
+		
 	}
 	
 	
@@ -218,12 +214,12 @@ public class ARA extends AbstractSearch {
 	}
 	
 	/** Create and/or retrieve all neighbors of the node. */
-	protected ArrayList<ARANode> neighbors(ARANode an) {
+	protected ArrayList<EpsNode> neighbors(EpsNode an) {
 		ArrayList<int[]> xys = this.getXYs(an.xy);
-		ArrayList<ARANode> neighbors = new ArrayList<ARANode>();
+		ArrayList<EpsNode> neighbors = new ArrayList<EpsNode>();
 		
 		for (int[] xy: xys) {
-			ARANode n;
+			EpsNode n;
 			if (xy[0] == this.position[0] && xy[1] == this.position[1]) {
 				n = this.rootNode;
 				if (an.getG() + this.getCost(this.map, n.xy) < n.getG()) {
@@ -233,10 +229,10 @@ public class ARA extends AbstractSearch {
 			}
 			if (this.expanded.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.expanded.get(Node.getHashKeyFor(xy));
-				if (!n.isVisited()) { continue; }
+				//if (!n.isVisited()) { continue; }
  			} 
 			else {
-				n = new ARANode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), this.e);
+				n = new EpsNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), this.e);
 				this.expanded.put(n.getHashKey(), n);
 				n.prev = an;
 			}
@@ -245,25 +241,25 @@ public class ARA extends AbstractSearch {
 		return neighbors;
 	} 
 	
-	protected ArrayList<ARANode> succ(ARANode n) {
-		ArrayList<ARANode> succ = this.neighbors(n);
+	protected ArrayList<EpsNode> succ(EpsNode n) {
+		ArrayList<EpsNode> succ = this.neighbors(n);
 
 		int i = 0;
 		double g = n.getG();
 		while (succ.size() > 0 && i < succ.size()) {
-			ARANode s = succ.get(i);
+			EpsNode s = succ.get(i);
 			if (s.getG() >= g) succ.remove(s);
 			else i++;
 		}
 		return succ;
 	}
 	
-	protected ArrayList<ARANode> pred(ARANode n) {
-		ArrayList<ARANode> pred = this.neighbors(n);
+	protected ArrayList<EpsNode> pred(EpsNode n) {
+		ArrayList<EpsNode> pred = this.neighbors(n);
 		int i = 0;
 		double g = n.getG();
 		while (pred.size() > 0 && i < pred.size()) {
-			ARANode s = pred.get(i);
+			EpsNode s = pred.get(i);
 			if (s.getG() < g) pred.remove(s);
 			else i++;
 		}

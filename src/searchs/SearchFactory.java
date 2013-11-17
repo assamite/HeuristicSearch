@@ -21,10 +21,12 @@ public class SearchFactory {
 		switch (searchType) {
 			case ASTAR: 
 				return new AStar(r, root, goal);
-			case DLITE:
+			case D_LITE:
 				return new DLite(r, root, goal);
 			case ARA:
 				return new ARA(r, root, goal);
+			case NAIVE_ANYTIME:
+				return new NaiveAnytime(r, root, goal);
 			case ADSTAR:
 				// Not implemented yet.
 			default:

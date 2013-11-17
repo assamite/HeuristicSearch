@@ -74,4 +74,8 @@ public class Node implements Comparable<Node> {
 	public static int getHashKeyFor(int[] xy) {
 		return xy[0] * 10000 + xy[1];	
 	} 
+	
+	public Node clone() {
+		return new Node(this.xy, this.g, this.h);
+	}
 }

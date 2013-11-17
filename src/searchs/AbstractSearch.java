@@ -161,7 +161,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 			cost = 10000.0;		
 		}
 		else {
-			cost = ((double)(256 - r.getSample(xy[0], xy[1], 0)) / 96) + 1;
+			cost = ((double)(256 - r.getSample(xy[0], xy[1], 0)) / 48) + 1;
 		}
 		return cost;
 	}

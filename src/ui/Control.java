@@ -43,12 +43,14 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 	private final ButtonGroup searchTypeButtons = new ButtonGroup();
 	/** Button for A* search */
 	private final JRadioButton AStarButton = new JRadioButton();
-	/** Button for A* search */
+	/** Button for D* Lite search */
 	private final JRadioButton DLiteButton = new JRadioButton();
-	/** Button for A* search */
+	/** Button for ARA* search */
 	private final JRadioButton ARAButton = new JRadioButton();
-	/** Button for A* search */
+	/** Button for AD* search */
 	private final JRadioButton ADStarButton = new JRadioButton();
+	/** Button for naive anytime search */
+	private final JRadioButton NaiveAnytimeButton = new JRadioButton();
 
 	public Control() {
 		//this.setBackground(new Color(240, 230, 245));
@@ -73,19 +75,21 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 
 		// Search type buttons
 		JPanel searchTypeWrapper = new JPanel();
-		searchTypeWrapper.setLayout(new GridLayout(2, 2, 0, 0));
+		searchTypeWrapper.setLayout(new GridLayout(2, 3, 0, 0));
 		searchTypeWrapper.setPreferredSize(new Dimension(280, 70));
-		searchTypeWrapper.setBounds(0, 0, this.width, 70);
+		searchTypeWrapper.setBounds(0, 0, this.width, 100);
 		searchTypeWrapper.setOpaque(false);
 		searchTypeWrapper.setBorder(UIScheme.createTitledBorder("Search Type"));
 		this.searchTypeButtons.add(this.AStarButton);
+		this.searchTypeButtons.add(this.NaiveAnytimeButton);
 		this.searchTypeButtons.add(this.DLiteButton);
 		this.searchTypeButtons.add(this.ARAButton);
 		this.searchTypeButtons.add(this.ADStarButton);
 		this.AStarButton.setSelected(true);
 		UIScheme.initButton(this.AStarButton, 55, 25, searchTypeWrapper, "A*", this);
-		UIScheme.initButton(this.DLiteButton, 55, 25, searchTypeWrapper, "D* Lite", this);
+		UIScheme.initButton(this.NaiveAnytimeButton, 55, 25, searchTypeWrapper, "NAA*", this);
 		UIScheme.initButton(this.ARAButton, 55, 25, searchTypeWrapper, "ARA*", this);
+		UIScheme.initButton(this.DLiteButton, 55, 25, searchTypeWrapper, "D* Lite", this);
 		UIScheme.initButton(this.ADStarButton, 55, 25, searchTypeWrapper, "AD*", this);
 		controlWrapper.add(searchTypeWrapper);
 		
@@ -142,9 +146,13 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 			EventHandler.printInfo("A* search selected.");
 			EventHandler.changeSearchType(SearchType.ASTAR);
 		}
+		else if (ac.equals("NAA*")) {
+			EventHandler.printInfo("naive anytime search selected.");
+			EventHandler.changeSearchType(SearchType.NAIVE_ANYTIME);
+		}
 		else if (ac.equals("D* Lite")) {
 			EventHandler.printInfo("D* Lite search selected.");
-			EventHandler.changeSearchType(SearchType.DLITE);
+			EventHandler.changeSearchType(SearchType.D_LITE);
 		}
 		else if (ac.equals("ARA*")) {
 			EventHandler.printInfo("ARA* search selected.");
@@ -162,7 +170,8 @@ public class Control extends JPanel implements ActionListener, ChangeListener {
 	public SearchType getSelectedSearchType() {
 		String actionCommand = this.searchTypeButtons.getSelection().getActionCommand();
 		if (actionCommand == "A*") return SearchType.ASTAR;
-		if (actionCommand == "D* Lite") return SearchType.DLITE;
+		if (actionCommand == "NAA*") return SearchType.NAIVE_ANYTIME;
+		if (actionCommand == "D* Lite") return SearchType.D_LITE;
 		if (actionCommand == "ARA*") return SearchType.ARA;
 		else return SearchType.ADSTAR;
 	}

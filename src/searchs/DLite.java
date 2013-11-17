@@ -63,17 +63,21 @@ public class DLite extends AbstractSearch {
 				}
 			}
 		if (toRemove != null) chunks.remove(toRemove);
-		System.out.println("Publishing " + chunks.size());
+		//System.out.println("Publishing " + chunks.size());
 		synchronized (this.robot) { this.robot.updateSearched(chunks); }
 	}
 	
 	/** Update state of the node. */
 	protected void updateState(DNode dn) {
 		int dnKey = dn.getHashKey();
+		if (!dn.isVisited()) {
+			dn.setG(Double.MAX_VALUE / 2);
+			dn.setVisited();
+		}	
 		if (!dn.equals(this.goalNode)) {
 			double minG = dn.prev.getG();
 			Node newPrev = dn.prev;
-			for (DNode d: this.succ(dn)) {
+			for (DNode d: this.neighbors(dn)) {
 				if (d.getG() < minG) {
 					minG = d.getG();
 					newPrev = d;
@@ -84,38 +88,43 @@ public class DLite extends AbstractSearch {
 			//dn.setRhs(dn.prev.getG() + this.getCost(this.map, dn.xy));
 		}
 		if (dn.getG() != dn.getRhs()) {
-			if (this.openMap.containsKey(dnKey)) {
+			if (dn.isOpen()) {
+				this.open.remove(dn);
+				this.open.add(dn);
 				//System.out.println("opened again " + dnKey);
-				this.openMap.get(dnKey).setValues(dn);
+				//this.openMap.get(dnKey).setValues(dn);
 			}
 			else {
-				this.openMap.put(dnKey, dn);
+				//this.openMap.put(dnKey, dn);
+				dn.setOpen();
 				this.open.add(dn);
-				this.expanded.put(dnKey, dn);
+				//this.expanded.put(dnKey, dn);
 			}
 		}
-		else if (this.openMap.containsKey(dnKey)) {
-			this.openMap.remove(dnKey);
+		else if (dn.isOpen()) {
 			this.open.remove(dnKey);
 		}
 	}
 
 	@Override
-	protected synchronized void search() {
+	protected void search() {
 		this.open.add(this.goalNode);
 		this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
 		this.expanded.put(this.goalNode.getHashKey(), this.goalNode);
 		this.expanded.put(this.rootNode.getHashKey(), this.rootNode);
 			
-		while (!(this.position[0] == this.goal[0] && this.position[1] == this.goal[1])) {
+		while (!this.inGoal()) {
 			if (this.isCancelled()) break;
 			this.robot.clearSearched();
-			int key = Node.getHashKeyFor(this.position);
-			if (this.expanded.containsKey(key)) {
-				this.rootNode = this.expanded.get(key);
-				this.rootNode.setG(Double.MAX_VALUE / 2);
-				this.rootNode.setRhs(Double.MAX_VALUE / 2);
-				System.out.println("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
+			
+			synchronized (this.robot.positionLock) {
+				int key = Node.getHashKeyFor(this.position);
+				if (this.expanded.containsKey(key)) {
+					this.rootNode = this.expanded.get(key);
+					//this.rootNode.setG(Double.MAX_VALUE / 2);
+					//this.rootNode.setRhs(Double.MAX_VALUE / 2);
+					//System.out.println("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
+				}
 			}
 			this.computeShortestPath(this.rootNode, this.goalNode);
 			
@@ -147,18 +156,18 @@ public class DLite extends AbstractSearch {
 		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() != r.getG())) {
 			if (this.isCancelled()) break;
 			DNode dn = this.open.remove();
-			System.out.println(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1] + " " + dn.getRhs() + " " + r.getRhs());
+			//System.out.println(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1] + " " + dn.getRhs() + " " + r.getRhs());
 			this.expanded.put(dn.getHashKey(), dn);
 			this.publish(dn);
 			if (dn.getG() > dn.getRhs()) {
 				dn.setG(dn.getRhs());
-				for (DNode pred: this.pred(dn)) { 
-					this.updateState(pred);
+				for (DNode n: this.neighbors(dn)) { 
+					this.updateState(n);
 				}
 			}
 			else {
 				dn.setG(Double.MAX_VALUE / 2);
-				for (DNode pred: this.pred(dn)) { this.updateState(pred); }
+				for (DNode n: this.neighbors(dn)) { this.updateState(n); }
 				this.updateState(dn);
 			}
 		}
@@ -179,50 +188,16 @@ public class DLite extends AbstractSearch {
 			
 			else if (this.expanded.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.expanded.get(Node.getHashKeyFor(xy));
-				/*
-				if (n.prev.compareTo(dn) > 0) {
-					n.prev = dn;
-					n.setRhs(dn.getG() + this.getCost(this.map, n.xy));
-					this.updateState(n);
-				}
-				*/
  			}
 			else {
 				n = new DNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), Double.MAX_VALUE / 2);
 				n.prev = dn;
 				this.expanded.put(n.getHashKey(), n);
-				//this.open.add(n);
-				//this.openMap.put(n.getHashKey(), n);
 			}
 			neighbors.add(n);
 		}
 		return neighbors;
 	} 
-	
-	protected ArrayList<DNode> succ(DNode dn) {
-		ArrayList<DNode> succ = this.neighbors(dn);
-
-		int i = 0;
-		double g = dn.getG();
-		while (succ.size() > 0 && i < succ.size()) {
-			DNode s = succ.get(i);
-			if (s.getG() >= g) succ.remove(s);
-			else i++;
-		}
-		return succ;
-	}
-	
-	protected ArrayList<DNode> pred(DNode dn) {
-		ArrayList<DNode> pred = this.neighbors(dn);
-		int i = 0;
-		double g = dn.getG();
-		while (pred.size() > 0 && i < pred.size()) {
-			DNode s = pred.get(i);
-			if (s.getG() < g) pred.remove(s);
-			else i++;
-		}
-		return pred;
-	}
 	
 	/** Construct shortest path for root node to goal node. */
 	protected void constructPath() {
@@ -242,11 +217,20 @@ public class DLite extends AbstractSearch {
 		}	
 	}
 	
+	public boolean inGoal() {
+		synchronized (this.robot.positionLock) {
+			if (this.position[0] != this.root[0]) return false;
+			if (this.position[1] != this.root[1]) return false;
+			return true;
+		}
+	}
+	
 	/** Replan the current route with the information of the changed pixels. */
 	public synchronized DLite replan(double[][] changed) {
 		this.map = this.robot.getMap();
-		this.open.clear();
-		this.openMap.clear();
+		//this.open.clear();
+		
+		
 		if (changed != null) {
 			for (double[] xyv: changed) {
 				int[] xy = new int[] {(int)xyv[0], (int)xyv[1]};
@@ -264,8 +248,8 @@ public class DLite extends AbstractSearch {
 					DNode n = this.expanded.get(this.path.get(i).getHashKey());
 					System.out.println(n.xy[0] + " " + n.xy[1] + " " + n.getG() + " " + xyv[2]);
 					//System.out.println("propagating the path");
-					this.updateState(n);	
-					//for (DNode d: this.neighbors(n)) this.updateState(d);
+					//this.updateState(n);	
+					for (DNode d: this.neighbors(n)) this.updateState(d);
 					}
 				}
 				

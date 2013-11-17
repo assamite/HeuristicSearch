@@ -61,6 +61,11 @@ public class SearchBot {
 	/** Color of the drawn searched nodes. */
 	private int[] searchedColor = {255, 0, 255, 40};
 	
+	private ArrayList<Node> storedPath = new ArrayList<Node>(); 
+	/** Object which can be used in the synchronized -block when updating 
+	 * position status.*/
+	public Object positionLock = new Object();
+	
 	public SearchBot(BufferedImage map, SearchType searchType) {
 		this.map = map.getData();	
 		this.searchType = searchType;
@@ -83,6 +88,7 @@ public class SearchBot {
 		this.search = SearchFactory.createSearch(searchType, this, root, goal);
 	}
 	
+	// Some setters and getters
  	public int[] getRoot() { return this.root; }
  	public int[] getGoal() { return this.goal; }
 	public int[] getPosition() { return this.position; }
@@ -135,7 +141,27 @@ public class SearchBot {
  		*/
  		if (path != null) {
  			this.plannedPath = path;
- 			int idx = this.searchType == SearchType.ASTAR ? path.size() - 1 : 0;
+ 			/*
+ 			System.out.println(this.storedPath.size());
+ 			if (this.storedPath.size() != 0) {
+ 				if (this.storedPath.size() != this.plannedPath.size()) 
+ 					System.out.println(this.storedPath.size() + " != " + this.plannedPath.size());
+ 				else {
+ 					for (int i = 0; i < path.size(); i++) {
+ 						Node n1 = this.plannedPath.get(i);
+ 						Node n2 = this.storedPath.get(i);
+ 						System.out.println(n1.xy[0] + " " + n1.xy[1] + " " + 
+ 						n1.getG() + " - " + n2.xy[0] + " " + n2.xy[1] + " " + n2.getG());
+ 						//if (n1.getG() != n2.getG()) System.out.println("OOOOOOOPS!");
+ 					}
+ 				}
+ 				
+ 			}
+ 			this.storedPath = new ArrayList<Node>();
+ 			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
+ 			System.out.println(this.storedPath.size());
+ 			*/
+ 			int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
  			EventHandler.printInfo("Searched to goal " + this.searched.size());
  			String msg = String.format("To goal: length %d, cost %.2f", 
  					path.size(), path.get(idx).getG());
@@ -154,7 +180,7 @@ public class SearchBot {
 	 */
 	public void updateSearched(List<Object> chunks) {
 		for (Object o: chunks) {
-			if (o != null) this.searched.add((Node)o);
+			this.searched.add((Node)o);
 		}
 		EventHandler.updateRobot(this, null);
 	}
@@ -179,7 +205,7 @@ public class SearchBot {
 		}
 	}
 	
-	/** Clear robot's search, and set current search algorithm to null. */
+	/** Clear robot's search, and create new search algorithm instance. */
 	public void clearSearch() {
 		if (this.search != null) {
 			if (!this.search.isDone()) 
@@ -225,14 +251,15 @@ public class SearchBot {
 		if (this.plannedPath != null && !this.plannedPath.isEmpty()) {
 			int[] xy = this.plannedPath.remove(0).xy;
 			this.traveledPath.add(xy);
-			this.position = xy;
-			synchronized (this.search) { this.search.setPosition(xy); }
+			synchronized (this.positionLock) { 
+				this.position = xy;
+				this.search.setPosition(xy); 
+			}
 			EventHandler.repaintMap();
 		}
 		else {
 			this.travelTimer.cancel();
 			this.travelTimer.purge();
-			EventHandler.printInfo("Timer canceled");
 		}
 		if (this.position[0] == this.goal[0] && this.position[1] == this.goal[1]) {
 			this.search.cancel(true);

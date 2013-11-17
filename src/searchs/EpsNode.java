@@ -1,27 +1,41 @@
 package searchs;
 
-public class ARANode extends Node {
+/**
+ * Node with added epsilon value. Key is calculated as g + epsilon * h. Also 
+ * membership between the different sets, ie. closed, open, inconsistent, is 
+ * kept inside the node. All nodes are created as "not visited". Users of the 
+ * node have to change the set membership appropriately for their needs.
+ * 
+ * @author slinkola
+ *
+ */
+public class EpsNode extends Node {
 	/** 0 = not visited, 1 = visited, 2 = closed, 3 = open, 4 = inconsistent. */
 	private int memberOfSet = 0;
 	private double e;
 
-	public ARANode(int[] xy, double g, double h, double e) {
+	public EpsNode(int[] xy, double g, double h, double e) {
 		super(xy, g, h);
 		this.e = e;
 	}
 	
+	/** Set the node's epsilon value. */
 	public void setE(double e) {
 		this.e = e;
 	}
 	
+	/** Get the nodes current epsilon value.*/
 	public double getE() {
 		return this.e;
 	}
 	
+	/** Key = g + e * h. */
 	public double getKey() {
 		return this.g + (this.h * this.e);
 	}
 
+	/** Node is always visited when it is either closed, open or inconsistent or
+	 * deliberately setting it as visited. */
 	public boolean isVisited() {
 		if (memberOfSet == 0) return false;
 		return true;
@@ -59,8 +73,8 @@ public class ARANode extends Node {
 	}
 	
 	@Override
-	public int compareKeys(Node n) {
-		double c = this.getKey() - ((ARANode)n).getKey();
+	protected int compareKeys(Node n) {
+		double c = this.getKey() - ((EpsNode)n).getKey();
 		if (c < 0) return -1;
 		if (c > 0) return 1;
 		return 0;	
