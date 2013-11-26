@@ -93,6 +93,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	@Override
 	/** SwingWorker's overrided method. Called when the task is complete. */
 	public void done() {
+		print("Search thread done.");
 		this.isRunning = false;
 	}
 	
@@ -199,6 +200,14 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	 */
 	protected boolean isGoal(Node n) {
 		if (n.xy[0] == this.goal[0] && n.xy[1] == this.goal[1]) return true;
+		return false;
+	}
+
+	/** Position updates and is the new root for the searches that can process
+	 * altering terrain, etc. */
+	protected boolean isPosition(Node n) {
+		if (n.xy[0] == this.position[0] && n.xy[1] == this.position[1])
+			return true;
 		return false;
 	}
 	

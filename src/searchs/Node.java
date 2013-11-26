@@ -18,8 +18,8 @@ public class Node implements Comparable<Node> {
 	protected double h;
 	protected double g;
 	protected int hashKey;
-	/** Previous node from which this node was spawned from. Can be either 
-	 * predecessor (A*) or successor (D* Lite, ARA*, AD*). */
+	/** Previous node from which this node was spawned from. Used for 
+	 * reconstructing the path after the goal has been found. */
 	public Node prev = null;
 	
 	// Final variables for different set type memberships.

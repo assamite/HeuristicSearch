@@ -2,10 +2,12 @@ package searchs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 
 import robot.SearchBot;
+import ui.EventHandler;
 
 /**
  * D* Lite search which uses current knowledge of the nodes in replanning phase,
@@ -49,26 +51,35 @@ public class DLite extends AbstractSearch {
 	/** SwingWorker's overrided method, called when publish is called for 
 	 * interim results. Adds chunks to robot's searched node list. */
 	protected void process(List<Object> chunks) {
-		Object toRemove = null;
-		for (Object o: chunks)
+		LinkedList<ArrayList<Node>> paths = new LinkedList<ArrayList<Node>>();
+		for (Object o: chunks) {
 			if (o instanceof ArrayList<?>) {
 				try {
-					ArrayList<Node> n = (ArrayList<Node>)o;
-					toRemove = o; 
-					this.robot.setPlannedPath(n);
-					//this.path = new ArrayList<Node>();
+					paths.add((ArrayList<Node>)o); 
+					EventHandler.printInfo("D* Lite found planned path.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!
 				}
 			}
-		if (toRemove != null) chunks.remove(toRemove);
-		//System.out.println("Publishing " + chunks.size());
-		synchronized (this.robot) { this.robot.updateSearched(chunks); }
+		}
+		if (paths.size() > 0) {
+			ArrayList<Node> p = paths.getLast();
+			
+			while (paths.size() > 0) {
+				ArrayList<Node> r = paths.remove();
+				chunks.remove(r);
+			}
+			this.robot.updateSearched(chunks);
+			this.robot.setPlannedPath(p);
+		}
+		else {
+			this.robot.updateSearched(chunks);
+		}
 	}
 	
 	
-	/** Update state of the node. */
+	/** Update state/set membership of the node. */
 	protected void updateState(DNode dn) {
 		int dnKey = dn.getHashKey();
 		if (!dn.isVisited()) {
@@ -126,6 +137,7 @@ public class DLite extends AbstractSearch {
 					print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 				}
 			}
+			print("Starting to compute shortest path");
 			this.computeShortestPath(this.rootNode, this.goalNode);
 			print("Shortest path computed");
 			
@@ -135,10 +147,17 @@ public class DLite extends AbstractSearch {
 			
 				// Wait until changes are observed.
 				try {
-					this.wait();
+					print("Waiting for changes in search space.");
+					synchronized(this) {
+						this.wait();
+					}
+					print("Thread notified. Starting new search iteration.");
 				}
-				catch (InterruptedException e) {
+				catch (Exception e) {
 					// TODO: notify something about this
+					e.printStackTrace();	
+					break;
+					
 				}	
 			}
 		}
@@ -147,7 +166,7 @@ public class DLite extends AbstractSearch {
 	/**
 	 * Compute shortest path between DNodes r and gl. Computation is done 
 	 * "backwards", ie. from gl to r.
-	 * @param r current position of the robot, ie. root.
+	 * @param r current position of the robot, ie. root of the search.
 	 * @param gl robot's goal.
 	 */
 	protected void computeShortestPath(DNode r, DNode gl) {
@@ -169,8 +188,13 @@ public class DLite extends AbstractSearch {
 			}
 			else {
 				dn.setG(Double.MAX_VALUE / 2);
-				for (DNode n: this.neighbors(dn)) { this.updateState(n); }
 				this.updateState(dn);
+				for (DNode n: this.neighbors(dn)) { 
+					if (!this.isPosition(n)) {
+						this.updateState(n); 
+					}
+				}
+				
 			}
 		}
 	}
@@ -203,20 +227,29 @@ public class DLite extends AbstractSearch {
 	
 	/** Construct shortest path for root node to goal node. */
 	protected void constructPath() {
-		print("Computing Path");
-		Node gn = this.rootNode;
-		if (gn != null) {
-			this.path = new ArrayList<Node>();
-			this.path.add(gn);
-			while (gn.prev != null) {
-				this.path.add(gn.prev);
-				gn = gn.prev;	
+		print("Constructing path");
+		try {
+			Node gn = this.rootNode;
+			if (gn != null) {
+				print("plaa");
+				this.path = new ArrayList<Node>();
+				this.path.add(gn);
+				print(gn.getHashKey() + "");
+				while (gn.prev != null) {
+					this.path.add(gn.prev);
+					gn = gn.prev;	
+					print(gn.getHashKey() +"");
+				}
+				print("Path with length " + this.path.size() + " found.");
 			}
-			print("Path with length " + this.path.size() + " found.");
+			else {
+				print("ploo");
+				this.path = null;	
+			}
 		}
-		else {
-			this.path = null;	
-		}	
+		catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	public boolean inGoal() {
@@ -229,18 +262,22 @@ public class DLite extends AbstractSearch {
 	
 	/** Replan the current route with the information of the changed pixels. */
 	public synchronized DLite replan(double[][] changed) {
+		print("Starting to replan.");
 		this.map = this.robot.getMap();
+		//this.open.clear();
 
 		if (changed != null) {
 			for (double[] xyv: changed) {
 				int[] xy = new int[] {(int)xyv[0], (int)xyv[1]};
 				int hashKey = Node.getHashKeyFor(xy);
 				int idx = -1;
+				/*
 				for (int i = 0; i < this.path.size(); i++) {
 					if (this.path.get(i).getHashKey() == hashKey) {
 						idx = i;
-						DNode n = this.created.get(this.path.get(idx).getHashKey());
+						DNode n = this.created.get(hashKey);
 						n.setRhs(n.getRhs() + xyv[2]);
+						//this.updateState(n);
 					}
 				}
 				if (idx > -1) {
@@ -248,12 +285,12 @@ public class DLite extends AbstractSearch {
 					DNode n = this.created.get(this.path.get(i).getHashKey());
 					System.out.println(n.xy[0] + " " + n.xy[1] + " " + n.getG() + " " + xyv[2]);
 					//print("propagating the path");
-					//this.updateState(n);	
+					this.updateState(n);	
 					for (DNode d: this.neighbors(n)) this.updateState(d);
 					}
 				}
-				
-				else if (this.created.containsKey(hashKey)) {
+				*/
+				if (this.created.containsKey(hashKey)) {
 					DNode dn = this.created.get(hashKey);
 					//print(dn.xy[0] + " " + dn.xy[1] + " " + dn.getG() + " " + xyv[2]);
 					dn.setRhs(dn.getRhs() + xyv[2]);
@@ -264,7 +301,8 @@ public class DLite extends AbstractSearch {
 			print("New open size " + this.open.size());
 		}
 		print("Expsize " + this.created.size());
-		this.path.clear();
+		//this.path.clear();
+		synchronized(this) {this.notify();}
 		return this;
 	}
 }

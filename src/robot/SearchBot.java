@@ -207,6 +207,7 @@ public class SearchBot {
 	
 	/** Clear robot's search, and create new search algorithm instance. */
 	public void clearSearch() {
+		System.out.println("Robot: Clearing search.");
 		if (this.search != null) {
 			if (!this.search.isDone()) 
 				this.search.cancel(true);
@@ -277,7 +278,11 @@ public class SearchBot {
 		this.plannedPath.clear();
 		
 		this.search = this.search.replan(changed);
-		synchronized(this.search) { this.search.notify(); }
+		synchronized(this.search) { 
+			System.out.println("Robot: Notifying search.");
+			this.search.notify();
+			System.out.println("Robot: Search notified.");		
+		}
 		if (this.isSearchStarted && !this.search.isRunning())
 			this.search.execute();
 	}
