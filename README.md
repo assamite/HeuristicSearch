@@ -3,7 +3,7 @@ Heuristic Search
 
 Different heuristic search algorithms implemented in Java. Very much work in progress.
 
-**The application is currently developed only with OS X, so some inconsistencies with
+**The application is currently developed only with OS X and Java 1.6, so some inconsistencies with
 the UI (most importantly menubar) may be seen in Linux and Windows.**
 
 Allows the user to load jpg/png images as maps, converts them to grayscale *in memory* 
@@ -14,16 +14,17 @@ currently allowed.
 
 Currently application's main resides in src/ui/UILauncher. 
 
-See Help-menu for Instructions of how to setup root and goal states, etc..
+See application's Help-menu for Instructions of how to setup root and goal states, etc..
 
 Current Implementation Status
 --------------
-| Algorithm | %          | status      | other comments                     |
-| --------- | ---------- | ----------- | -----------------------------------| 
-| A*        | ********** | DONE        |                                    |
-| D* Lite   | ******     | started     | some peculiar bug with replanning  | 
-| ARA*      | *********  | polishing   | need to check pq consistency       |
-| AD*       |            | not started |                                    |
+| Algorithm     | %          | status      | other comments                     |
+| ------------- | ---------- | ----------- | -----------------------------------| 
+| A*            | ********** | DONE        |                                    |
+| Naive Anytime | ********** | DONE        | Basically A*  with inflated h      |
+| D* Lite       | *******    | polishin    | some peculiar bug with replanning  | 
+| ARA*          | ********** | DONE        |                                    |
+| AD*           |            | started     |                                    |
 
 Some other algorithms might be implemented at *some* point in the (very distant) future (in the galaxy very far away).
 
