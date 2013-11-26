@@ -8,7 +8,7 @@ import java.util.PriorityQueue;
 import robot.SearchBot;
 
 /** Class that implements naive anytime search by inflating A* heuristic with
- * epsilon modified. */
+ * epsilon modifier. */
 public class NaiveAnytime extends AbstractSearch {
 	/** Current open list. */
 	PriorityQueue<EpsNode> open = new PriorityQueue<EpsNode>();
@@ -25,12 +25,13 @@ public class NaiveAnytime extends AbstractSearch {
 	}
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal) {
-		super(r, root, goal);
+		// Search from goal to root.
+		super(r, goal, root);
 		this.name = "Naive Anytime";
 	}
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal, double eps) {
-		super(r, root, goal);
+		super(r, goal, root);
 		this.e = eps;
 		this.name = "Naive Anytime";
 	}
@@ -63,7 +64,7 @@ public class NaiveAnytime extends AbstractSearch {
 	}
 	
 	@Override
-	/** Execute A* search and publish closed list additions as intermediate 
+	/** Execute search and publish closed list additions as intermediate 
 	 * results. 
 	 */
 	protected synchronized void search() {	
@@ -80,6 +81,7 @@ public class NaiveAnytime extends AbstractSearch {
 				if (this.isGoal(n)) {
 					found = true;
 					this.constructPath(n);
+					this.publish(this.path);
 					continue;
 				}
 				this.closed.put(n.getHashKey(), n);
@@ -106,7 +108,6 @@ public class NaiveAnytime extends AbstractSearch {
 				publish(n);
 			}
 			this.e = this.e - 0.5;
-			System.out.println(this.e);
 			// testing
 			try {
 				Thread.sleep(150);

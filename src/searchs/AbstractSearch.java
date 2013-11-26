@@ -201,4 +201,10 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 		if (n.xy[0] == this.goal[0] && n.xy[1] == this.goal[1]) return true;
 		return false;
 	}
+	
+	/** For all those times when System.out.println starts to seriously piss 
+	 * you off. Also easily changed to do logging or to print into info panel.*/
+	protected static void print(String s) {
+		System.out.println(s);
+	}
 }

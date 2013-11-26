@@ -130,12 +130,11 @@ public class ARA extends AbstractSearch {
 			for (int key: this.expanded.keySet()) {
 				EpsNode an = this.expanded.get(key);
 				if (an.isInconsistent()) { 
-					an.setOpen();
+					an.setMembership(Node.OPEN);
 					this.open.add(an);
-					//this.openMap.put(an.getHashKey(), an);
 				}
 				else if (an.isClosed()) {
-					an.setVisited();
+					an.setMembership(Node.VISITED);
 				}
 			}
 			this.improvePath();
@@ -163,7 +162,8 @@ public class ARA extends AbstractSearch {
 			//System.out.println(r.xy[0] + " " + r.xy[1] + " " + r.getG() + " " + e*r.getH());
 			EpsNode node = this.open.remove();
 			//System.out.println(node.xy[0] + " " + node.xy[1] + " " + node.getG() + " " + e*node.getH());
-			node.setClosed();
+			node.setMembership(Node.CLOSED);
+			// Publish only in batches.
 			publishArray[i] = node;
 			if (i == publishArray.length - 1) {
 				this.publish((Object[])publishArray);
@@ -172,18 +172,17 @@ public class ARA extends AbstractSearch {
 			else {
 				i++;
 			}
-
 			for (EpsNode n: this.pred(node)) {
 				if (n.g > this.getCost(this.map, node.xy) + node.g) {
 					n.g = this.getCost(this.map, node.xy) + node.g;
 					n.prev = node;
 					if (!n.isClosed()) {
-						n.setOpen();
+						n.setMembership(Node.OPEN);
 						n.setE(this.e);
 						this.open.add(n);
 					}
 					else {
-						n.setInconsistent();
+						n.setMembership(Node.INCONSISTENT);
 					}	
 				}
 			}

@@ -18,8 +18,8 @@ import robot.SearchBot;
 public class AStar extends AbstractSearch {
 	/** Current open list. */
 	PriorityQueue<Node> open = new PriorityQueue<Node>();
-	/** Helper data structure for ease of referring nodes in open list. */
-	HashMap<Integer, Node> openMap = new HashMap<Integer, Node>();
+	/** All created nodes. */
+	HashMap<Integer, Node> created = new HashMap<Integer, Node>();
 	/** Closed nodes list. */
 	private HashMap<Integer, Node> closed = new HashMap<Integer, Node>();
 
@@ -29,7 +29,8 @@ public class AStar extends AbstractSearch {
 	}
 	
 	public AStar(SearchBot r, int[] root, int[] goal) {
-		super(r, root, goal);
+		// Search from goal to root.
+		super(r, goal, root);
 		this.name = "A*";
 	}
 	
@@ -67,7 +68,7 @@ public class AStar extends AbstractSearch {
 	protected synchronized void search() {	
 		Node r = new Node(this.root, 0, this.calcH(this.root, this.goal));
 		open.add(r);
-		this.openMap.put(r.getHashKey(), r);
+		this.created.put(r.getHashKey(), r);
 		boolean found = false;
 		Node gn = null;	// goal node.
 		
@@ -79,24 +80,35 @@ public class AStar extends AbstractSearch {
 				continue;
 			}
 			this.closed.put(n.getHashKey(), n);
+			n.setMembership(Node.CLOSED);
 			Node[] childs = this.childs(n);
 			for (Node c: childs) {
 				int key = c.getHashKey();
-				if (this.closed.containsKey(key)) {
-					Node c1 = this.closed.get(key);
-					if (c.getG() >= c1.getG()) { 
-						continue;
+				if (this.created.containsKey(key)) {
+					double cost = this.getCost(this.map, c.xy);
+					if (c.isClosed()) {
+						if (n.getG() + cost >= c.getG()) { 
+							continue;
+						}
+						else {
+							c.setG(n.getG() + cost);
+							c.setMembership(Node.OPEN);
+							this.open.add(c);
+						}
 					}
-				}
-				if (this.openMap.containsKey(key)) {
-					Node c1 = this.openMap.get(key);
-					if (c.getG() < c1.getG()) {
-						c1.setG(c.getG());
+					else if (c.isOpen()) {
+						if (c.getG() < n.getG() + cost) {
+							c.setG(c.getG() + cost);
+							this.open.remove(c);
+							this.open.add(c);
+						}
+						
 					}
+					
 				}
 				else {
 					this.open.add(c);	
-					this.openMap.put(key, c);
+					this.created.put(key, c);
 				}
 			}
 			publish(n);
@@ -117,8 +129,13 @@ public class AStar extends AbstractSearch {
 		Node[] childs = new Node[costs.length];
 		for (int i = 0; i < costs.length; i++) {
 			int[] xy = xys.get(i);
-			childs[i] = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal));
-			childs[i].prev = n;
+			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+				childs[i] = this.created.get(Node.getHashKeyFor(xy));
+			}
+			else {
+				childs[i] = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal));
+				childs[i].prev = n;
+			}
 		}
 		return childs;
 	}

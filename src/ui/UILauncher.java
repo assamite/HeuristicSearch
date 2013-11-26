@@ -32,7 +32,7 @@ public class UILauncher {
 		new MainUI(width, height);
 		try {
 			int[] s = {90, 100}; int[] g = {100, 250};
-			File f = new File("/Users/slinkola/Eclipse_projects/ADstar/maps/italy.png");
+			File f = new File("/Users/pihatonttu/git/HeuristicSearch/maps/afghanbp.jpg");
 			EventHandler.loadMap(f);
 			MainUI.map.robot.setRoot(s);
 			MainUI.map.robot.setGoal(g);

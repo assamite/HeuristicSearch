@@ -11,9 +11,6 @@ public class DNode extends Node {
 	protected double rhs = 0;
 	protected double[] key = {0, 0};
 	
-	/** 0 = not visited, 1 = visited, 2 = closed, 3 = open, 4 = inconsistent. */
-	private int memberOfSet = 0;
-	
 	public DNode(int[] xy, double g, double h) {
 		super(xy, g, h);
 		this.setKey();
@@ -84,41 +81,4 @@ public class DNode extends Node {
 		return 1;
 	}
 	
-	/** Node is always visited when it is either closed, open or inconsistent or
-	 * deliberately setting it as visited. */
-	public boolean isVisited() {
-		if (memberOfSet == 0) return false;
-		return true;
-	}
-	
-	public void setVisited() {
-		this.memberOfSet = 1;
-	}
-	
-	public void setClosed() {
-		this.memberOfSet = 2;
-	}
-	
-	public void setOpen() {
-		this.memberOfSet = 3;
-	}
-	
-	public void setInconsistent() {
-		this.memberOfSet = 4;
-	}
-	
-	public boolean isClosed() {
-		if (this.memberOfSet == 2) return true;
-		return false;
-	}
-	
-	public boolean isOpen() {
-		if (this.memberOfSet == 3) return true;
-		return false;		
-	}
-	
-	public boolean isInconsistent() {
-		if (this.memberOfSet == 4) return true;
-		return false;	
-	}
 }

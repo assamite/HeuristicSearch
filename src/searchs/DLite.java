@@ -19,7 +19,7 @@ public class DLite extends AbstractSearch {
 	/** Helper data structure for fast reference to nodes in open list. */
 	protected HashMap<Integer, DNode> openMap = new HashMap<Integer, DNode>();
 	/** All the nodes generated in the current search. */
-	private HashMap<Integer, DNode> expanded = new HashMap<Integer, DNode>();
+	private HashMap<Integer, DNode> created = new HashMap<Integer, DNode>();
 	/** Current goal node. */
 	protected DNode goalNode;
 	/** Current root node, changed to the position of the travel when edge
@@ -67,12 +67,13 @@ public class DLite extends AbstractSearch {
 		synchronized (this.robot) { this.robot.updateSearched(chunks); }
 	}
 	
+	
 	/** Update state of the node. */
 	protected void updateState(DNode dn) {
 		int dnKey = dn.getHashKey();
 		if (!dn.isVisited()) {
 			dn.setG(Double.MAX_VALUE / 2);
-			dn.setVisited();
+			dn.setMembership(Node.VISITED);
 		}	
 		if (!dn.equals(this.goalNode)) {
 			double minG = dn.prev.getG();
@@ -91,27 +92,26 @@ public class DLite extends AbstractSearch {
 			if (dn.isOpen()) {
 				this.open.remove(dn);
 				this.open.add(dn);
-				//System.out.println("opened again " + dnKey);
-				//this.openMap.get(dnKey).setValues(dn);
+				//print("Node " + dnKey + " opened again.");
 			}
 			else {
-				//this.openMap.put(dnKey, dn);
-				dn.setOpen();
+				dn.setMembership(Node.OPEN);
 				this.open.add(dn);
-				//this.expanded.put(dnKey, dn);
 			}
 		}
 		else if (dn.isOpen()) {
 			this.open.remove(dnKey);
+			dn.setMembership(Node.CLOSED);
 		}
 	}
 
 	@Override
 	protected void search() {
 		this.open.add(this.goalNode);
-		this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
-		this.expanded.put(this.goalNode.getHashKey(), this.goalNode);
-		this.expanded.put(this.rootNode.getHashKey(), this.rootNode);
+		//this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
+		this.created.put(this.goalNode.getHashKey(), this.goalNode);
+		this.created.put(this.rootNode.getHashKey(), this.rootNode);
+		this.goalNode.setMembership(Node.OPEN);
 			
 		while (!this.inGoal()) {
 			if (this.isCancelled()) break;
@@ -119,14 +119,15 @@ public class DLite extends AbstractSearch {
 			
 			synchronized (this.robot.positionLock) {
 				int key = Node.getHashKeyFor(this.position);
-				if (this.expanded.containsKey(key)) {
-					this.rootNode = this.expanded.get(key);
-					//this.rootNode.setG(Double.MAX_VALUE / 2);
-					//this.rootNode.setRhs(Double.MAX_VALUE / 2);
-					//System.out.println("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
+				if (this.created.containsKey(key)) {
+					this.rootNode = this.created.get(key);
+					this.rootNode.setG(Double.MAX_VALUE / 2);
+					this.rootNode.setRhs(Double.MAX_VALUE / 2);
+					print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 				}
 			}
 			this.computeShortestPath(this.rootNode, this.goalNode);
+			print("Shortest path computed");
 			
 			if (!this.isCancelled()) {
 				this.constructPath();
@@ -152,12 +153,13 @@ public class DLite extends AbstractSearch {
 	protected void computeShortestPath(DNode r, DNode gl) {
 		if (this.open.isEmpty()) return;
 		
-		System.out.println(this.open.peek().getRhs() + " " + r.getRhs());
+		//print(this.open.peek().getRhs() + " " + r.getRhs());
 		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() != r.getG())) {
 			if (this.isCancelled()) break;
 			DNode dn = this.open.remove();
-			//System.out.println(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1] + " " + dn.getRhs() + " " + r.getRhs());
-			this.expanded.put(dn.getHashKey(), dn);
+			dn.setMembership(Node.CLOSED);
+			//print(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1] + " " + dn.getRhs() + " " + r.getRhs());
+			this.created.put(dn.getHashKey(), dn);
 			this.publish(dn);
 			if (dn.getG() > dn.getRhs()) {
 				dn.setG(dn.getRhs());
@@ -186,13 +188,13 @@ public class DLite extends AbstractSearch {
 					n.prev = dn;
 			}
 			
-			else if (this.expanded.containsKey(Node.getHashKeyFor(xy))) {
-				n = this.expanded.get(Node.getHashKeyFor(xy));
+			else if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+				n = this.created.get(Node.getHashKeyFor(xy));
  			}
 			else {
 				n = new DNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), Double.MAX_VALUE / 2);
 				n.prev = dn;
-				this.expanded.put(n.getHashKey(), n);
+				this.created.put(n.getHashKey(), n);
 			}
 			neighbors.add(n);
 		}
@@ -201,7 +203,7 @@ public class DLite extends AbstractSearch {
 	
 	/** Construct shortest path for root node to goal node. */
 	protected void constructPath() {
-		System.out.println("Computing Path");
+		print("Computing Path");
 		Node gn = this.rootNode;
 		if (gn != null) {
 			this.path = new ArrayList<Node>();
@@ -210,7 +212,7 @@ public class DLite extends AbstractSearch {
 				this.path.add(gn.prev);
 				gn = gn.prev;	
 			}
-			System.out.println("Path computed " + this.path.size());
+			print("Path with length " + this.path.size() + " found.");
 		}
 		else {
 			this.path = null;	
@@ -219,8 +221,8 @@ public class DLite extends AbstractSearch {
 	
 	public boolean inGoal() {
 		synchronized (this.robot.positionLock) {
-			if (this.position[0] != this.root[0]) return false;
-			if (this.position[1] != this.root[1]) return false;
+			if (this.position[0] != this.goal[0]) return false;
+			if (this.position[1] != this.goal[1]) return false;
 			return true;
 		}
 	}
@@ -228,9 +230,7 @@ public class DLite extends AbstractSearch {
 	/** Replan the current route with the information of the changed pixels. */
 	public synchronized DLite replan(double[][] changed) {
 		this.map = this.robot.getMap();
-		//this.open.clear();
-		
-		
+
 		if (changed != null) {
 			for (double[] xyv: changed) {
 				int[] xy = new int[] {(int)xyv[0], (int)xyv[1]};
@@ -239,33 +239,31 @@ public class DLite extends AbstractSearch {
 				for (int i = 0; i < this.path.size(); i++) {
 					if (this.path.get(i).getHashKey() == hashKey) {
 						idx = i;
-						DNode n = this.expanded.get(this.path.get(idx).getHashKey());
+						DNode n = this.created.get(this.path.get(idx).getHashKey());
 						n.setRhs(n.getRhs() + xyv[2]);
 					}
 				}
 				if (idx > -1) {
 					for (int i = idx -1; i >= 0; i--) {
-					DNode n = this.expanded.get(this.path.get(i).getHashKey());
+					DNode n = this.created.get(this.path.get(i).getHashKey());
 					System.out.println(n.xy[0] + " " + n.xy[1] + " " + n.getG() + " " + xyv[2]);
-					//System.out.println("propagating the path");
+					//print("propagating the path");
 					//this.updateState(n);	
 					for (DNode d: this.neighbors(n)) this.updateState(d);
 					}
 				}
 				
-				else if (this.expanded.containsKey(hashKey)) {
-					DNode dn = this.expanded.get(hashKey);
-					//System.out.println(dn.xy[0] + " " + dn.xy[1] + " " + dn.getG() + " " + xyv[2]);
+				else if (this.created.containsKey(hashKey)) {
+					DNode dn = this.created.get(hashKey);
+					//print(dn.xy[0] + " " + dn.xy[1] + " " + dn.getG() + " " + xyv[2]);
 					dn.setRhs(dn.getRhs() + xyv[2]);
 					for (DNode d: this.neighbors(dn)) this.updateState(d);
 				}
 
 			}
-			System.out.println("New open size " + this.open.size());
+			print("New open size " + this.open.size());
 		}
-		System.out.println("Expsize " + this.expanded.size());
-		//this.expanded.clear();
-		//this.expanded.putAll(this.openMap);
+		print("Expsize " + this.created.size());
 		this.path.clear();
 		return this;
 	}
