@@ -20,33 +20,33 @@ import ui.EventHandler;
  */
 public class ADStar extends AbstractSearch {
 	/** Current open list, contains exactly the inconsistent states. */
-	protected PriorityQueue<DNode> open = new PriorityQueue<DNode>();
+	protected PriorityQueue<ADNode> open = new PriorityQueue<ADNode>();
 	/** All the nodes generated in the current search. */
-	private HashMap<Integer, DNode> created = new HashMap<Integer, DNode>();
+	private HashMap<Integer, ADNode> created = new HashMap<Integer, ADNode>();
 	/** Current goal node. */
-	protected DNode goalNode;
+	protected ADNode goalNode;
 	/** Current root node, changed to the position of the travel when edge
 	 * changes are detected. */
-	protected DNode rootNode;
+	protected ADNode rootNode;
 	
 	/** Current epsilon value. */
 	protected double e = 4;
 	
 	public ADStar(SearchBot r) {
 		super(r);
-		this.rootNode = new DNode(
-				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);
-		this.goalNode = new DNode(
-				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0);
+		this.rootNode = new ADNode(
+				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2, this.e);
+		this.goalNode = new ADNode(
+				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0, this.e);
 		this.name = "AD*";
 	}
 	
 	public ADStar(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
-		this.rootNode = new DNode(
-				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);
-		this.goalNode = new DNode(
-				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0);
+		this.rootNode = new ADNode(
+				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2, this.e);
+		this.goalNode = new ADNode(
+				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0, this.e);
 		this.name = "AD*";
 		
 	}
@@ -84,54 +84,47 @@ public class ADStar extends AbstractSearch {
 	
 	
 	/** Update state/set membership of the node. */
-	protected void updateState(DNode dn) {
+	protected void updateState(ADNode dn) {
 		int dnKey = dn.getHashKey();
-		/*
-		if (!dn.isVisited()) {
-			dn.setG(Double.MAX_VALUE / 2);
-			dn.setMembership(Node.VISITED);
-		}	
-		*/
-		if (!dn.equals(this.goalNode)) {
-			double minG = Double.MAX_VALUE / 2;
-			Node newPrev = null;
-			for (DNode d: this.neighbors(dn)) {
-				if (d.getG() < minG) {
-					minG = d.getG();
-					newPrev = d;
+
+		if (dn.getG() != dn.getRhs()) {
+			if (!dn.isClosed()) {
+				if (dn.isOpen()) {
+					this.open.remove(dn);
+					this.open.add(dn);	
+				}
+				else {
+					dn.setMembership(Node.OPEN);
+					this.open.add(dn);					
 				}
 			}
-			//if (dn.prev != newPrev) print("new prev! " + dn.getHashKey() + " " + newPrev.getHashKey());
-			dn.setRhs(minG + this.getCost(this.map, dn.xy));
-			dn.prev = newPrev;
-			//dn.setRhs(dn.prev.getG() + this.getCost(this.map, dn.xy));
+			else if (!dn.isInconsistent()) {
+				if (dn.isOpen()) this.open.remove(dn);
+				dn.setMembership(Node.INCONSISTENT);
+			}
 		}
-		if (dn.getG() != dn.getRhs()) {
+		else {
 			if (dn.isOpen()) {
-				this.open.remove(dn);
-				this.open.add(dn);
-				//print("Node " + dnKey + " opened again.");
+				this.open.remove(dnKey);
+				dn.setMembership(Node.CLOSED);
 			}
-			else {
-				dn.setMembership(Node.OPEN);
-				this.open.add(dn);
+			else if (dn.isInconsistent()) {
+				dn.setMembership(Node.CLOSED);
 			}
-		}
-		else if (dn.isOpen()) {
-			this.open.remove(dnKey);
-			dn.setMembership(Node.CLOSED);
 		}
 	}
 
 	@Override
 	protected void search() {
-		this.open.add(this.goalNode);
 		this.created.put(this.goalNode.getHashKey(), this.goalNode);
 		this.created.put(this.rootNode.getHashKey(), this.rootNode);
+		this.open.add(this.goalNode);
 		this.goalNode.setMembership(Node.OPEN);
 			
 		while (!this.inGoal()) {
 			if (this.isCancelled()) break;
+			this.robot.clearSearched();
+			print("Epsilon = " + this.e);
 			
 			synchronized (this.robot.positionLock) {
 				int key = Node.getHashKeyFor(this.position);
@@ -149,50 +142,100 @@ public class ADStar extends AbstractSearch {
 				this.constructPath();
 				this.publish(this.path);
 			
-				// Wait until changes are observed.
-				try {
-					print("Waiting for changes in search space.");
-					synchronized(this) { this.wait(); }
-					print("Thread notified. Starting new search iteration.");
+				if (this.e == 1) {
+					// Wait until changes are observed.
+					try {
+						print("Waiting for changes in search space.");
+						synchronized(this) { this.wait(); }
+						print("Thread notified. Starting new search iteration.");
+					}
+					catch (InterruptedException ie) {
+						// Do not care about this, user has cancelled the search, etc.
+					}
+					catch (Exception e) {
+						// Houston, we have a problem.
+						e.printStackTrace();	
+						break;	
+					}
 				}
-				catch (Exception e) {
-					// TODO: notify something about this
-					e.printStackTrace();	
-					break;
+				else if (this.e > 1) {
+					this.e -= 0.5;	
 					
-				}	
+					
+					// Ugh. This is quite stupid, but has to be done so that the
+					// priorities get updated
+					PriorityQueue<ADNode> newPQ = new PriorityQueue<ADNode>();
+					for (ADNode n: this.open) { 
+						n.setH(this.calcH(n.xy, this.rootNode.xy));
+						n.setE(this.e);
+						newPQ.add(n); 
+					}
+					this.open = newPQ;
+
+					for (int key: this.created.keySet()) {
+						ADNode an = this.created.get(key);
+						an.setH(this.calcH(an.xy, this.rootNode.xy));
+						an.setE(this.e);
+						if (an.isInconsistent()) { 
+							an.setMembership(Node.OPEN);
+							this.open.add(an);
+						}
+						else if (an.isClosed()) {
+							an.setMembership(Node.VISITED);
+						}
+					}
+				}
 			}
 		}
 	}
 	
 	/**
-	 * Compute shortest path between DNodes r and gl. Computation is done 
+	 * Compute shortest path between ADNodes r and gl. Computation is done 
 	 * "backwards", ie. from gl to r.
 	 * @param r current position of the robot, ie. root of the search.
 	 * @param gl robot's goal.
 	 */
-	protected void computeShortestPath(DNode r, DNode gl) {
+	protected void computeShortestPath(ADNode r, ADNode gl) {
 		if (this.open.isEmpty()) return;
 		
 		print(this.open.peek().getRhs() + " " + r.getRhs());
-		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() != r.getG())) {
+		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() < r.getG())) {
 			if (this.isCancelled()) break;
-			DNode dn = this.open.remove();
-			dn.setMembership(Node.CLOSED);
+			ADNode dn = this.open.remove();
+			this.publish(dn);
 			//print(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1]);
 			//print(dn.getKey()[0] + " " + dn.getKey()[1] + " " + r.getKey()[0] + " " + r.getKey()[1]);
-			this.publish(dn);
+			
 			if (dn.getG() > dn.getRhs()) {
 				dn.setG(dn.getRhs());
-				for (DNode n: this.neighbors(dn)) { 
+				dn.setMembership(Node.CLOSED);
+				for (ADNode n: this.neighbors(dn)) { 
+					if (n.getRhs() > dn.getRhs() + this.getCost(this.map, n.xy)) {
+						n.prev = dn;
+						n.setRhs(dn.getRhs() + this.getCost(this.map, n.xy));
+						this.updateState(n);
+					}
 					this.updateState(n);
 				}
 			}
 			else {
 				dn.setG(Double.MAX_VALUE / 2);
 				this.updateState(dn);
-				for (DNode n: this.neighbors(dn)) { 
-						this.updateState(n); 
+				
+				for (ADNode n: this.neighbors(dn)) {  
+					if (n.prev == dn) {
+						double minG = Double.MAX_VALUE / 2;
+						Node newPrev = null;
+						for (ADNode d: this.neighbors(n)) {
+							if (d.getG() < minG) {
+								minG = d.getG();
+								newPrev = d;
+							}
+						}
+						n.prev = newPrev;
+						n.setRhs(minG + this.getCost(this.map, n.xy));
+						this.updateState(n);
+					}
 				}
 				
 			}
@@ -200,23 +243,24 @@ public class ADStar extends AbstractSearch {
 	}
 	
 	/** Create and/or retrieve all neighbors of the node. */
-	protected ArrayList<DNode> neighbors(DNode dn) {
+	protected ArrayList<ADNode> neighbors(ADNode dn) {
 		ArrayList<int[]> xys = this.getXYs(dn.xy);
-		ArrayList<DNode> neighbors = new ArrayList<DNode>();
+		ArrayList<ADNode> neighbors = new ArrayList<ADNode>();
 		
 		for (int[] xy: xys) {
-			DNode n;
+			ADNode n;
 			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.created.get(Node.getHashKeyFor(xy));
  			}
 			else {
-				n = new DNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), Double.MAX_VALUE / 2);
+				n = new ADNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), Double.MAX_VALUE / 2, this.e);
 				this.created.put(n.getHashKey(), n);
 			}
 			neighbors.add(n);
 		}
 		return neighbors;
 	} 
+	
 	
 	/** Construct shortest path for root node to goal node. */
 	protected void constructPath() {
@@ -250,6 +294,7 @@ public class ADStar extends AbstractSearch {
 		}
 	}
 	
+	/** Check is search is currently in goal, i.e. position == goal. */
 	public boolean inGoal() {
 		synchronized (this.robot.positionLock) {
 			if (this.position[0] != this.goal[0]) return false;
@@ -269,7 +314,7 @@ public class ADStar extends AbstractSearch {
 		};
 		*/
 		for (int i: this.created.keySet()) {
-			DNode dn = this.created.get(i);
+			ADNode dn = this.created.get(i);
 			dn.setH(this.calcH(dn.xy, this.position));
 		}
 		
@@ -278,15 +323,24 @@ public class ADStar extends AbstractSearch {
 				int[] xy = new int[] { (int)xyv[0], (int)xyv[1] };
 				int hashKey = Node.getHashKeyFor(xy);
 				if (this.created.containsKey(hashKey)) {
-					DNode dn = this.created.get(hashKey);
-					this.updateState(dn);
+					ADNode dn = this.created.get(hashKey);
+					if (dn != this.goalNode && dn.isVisited()) {
+						double minG = Double.MAX_VALUE / 2;
+						Node newPrev = null;
+						for (ADNode d: this.neighbors(dn)) {
+							if (d.getG() < minG) {
+								minG = d.getG();
+								newPrev = d;
+							}
+						}
+						dn.prev = newPrev;
+						dn.setRhs(minG + this.getCost(this.map, dn.xy));
+						this.updateState(dn);
+					}
 				}
-
 			}
 			print("New open size " + this.open.size());
 		}
-		print("Created size " + this.created.size());
-		//synchronized(this) {this.notify();}
 		return this;
 	}
 }

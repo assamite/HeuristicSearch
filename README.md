@@ -21,10 +21,12 @@ Current Implementation Status
 | Algorithm     | %          | status      | other comments                     |
 | ------------- | ---------- | ----------- | -----------------------------------| 
 | A*            | ********** | DONE        |                                    |
-| Naive Anytime | ********** | DONE        | Basically A*  with inflated h      |
-| D* Lite       | *******    | polishin    | some peculiar bug with replanning  | 
+| Naive Anytime | *********  | debug       | probably memory management issues  |
+| D* Lite       | ********   | debug       | some peculiar bug with replanning  | 
 | ARA*          | ********** | DONE        |                                    |
-| AD*           |            | started     |                                    |
+| AD*           | ******     | debug       | probably memory management issues  |
+
+*All the algorithms seem to work ok on first search iteration though.*
 
 Some other algorithms might be implemented at *some* point in the (very distant) future (in the galaxy very far away).
 

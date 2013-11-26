@@ -24,26 +24,19 @@ public class NaiveAnytime extends AbstractSearch {
 
 	public NaiveAnytime(SearchBot r) {
 		super(r);
-		this.name = "Naive Anytime";
+		this.name = "NAA*";
 	}
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal) {
 		// Search from goal to root.
 		super(r, goal, root);
-		this.name = "Naive Anytime";
+		this.name = "NAA*";
 	}
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal, double eps) {
 		super(r, goal, root);
 		this.e = eps;
-		this.name = "Naive Anytime";
-	}
-	
-	@Override
-	/** SwingWorker's overrided method. Called when the task is complete. */
-	public void done() {
-		this.robot.setPlannedPath(this.path);
-		this.isRunning = false;
+		this.name = "NAA*";
 	}
 	
 	@Override
@@ -55,7 +48,6 @@ public class NaiveAnytime extends AbstractSearch {
 			if (o instanceof ArrayList<?>) {
 				try {
 					paths.add((ArrayList<Node>)o); 
-					EventHandler.printInfo("NAA* reducing epsilon.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!
@@ -102,21 +94,29 @@ public class NaiveAnytime extends AbstractSearch {
 	 * results. 
 	 */
 	protected synchronized void search() {	
+		Node[] publishArray = new Node[2000];
+		
 		while (this.e >= 1.0) {
+			int i = 0;
+			this.robot.clearSearched();
 			this.open = new PriorityQueue<EpsNode>();
 			this.created = new HashMap<Integer, EpsNode>();
-			EpsNode r = new EpsNode(this.root, 0, this.calcH(this.root, this.goal), this.e);
-			r.setMembership(Node.OPEN);
-			open.add(r);
+			synchronized (this.robot.positionLock) { 
+				EpsNode r = new EpsNode(this.root, 0, this.calcH(this.root, this.goal), this.e);
+				r.setMembership(Node.OPEN);
+				open.add(r);
+			}
+
 			boolean found = false;
-			print(this.e + "");
+			print("Epsilon = " + this.e);
 			
 			while (!found && !this.open.isEmpty() && !this.isCancelled()) {
 				EpsNode n = this.open.remove();
 				if (this.isGoal(n)) {
 					found = true;
 					this.constructPath(n);
-					if (this.e == 0) this.publish(this.path);
+					//if (this.e == 0) 
+						this.publish(this.path);
 					continue;
 				}
 				n.setMembership(Node.CLOSED);
@@ -148,8 +148,21 @@ public class NaiveAnytime extends AbstractSearch {
 						this.created.put(key, c);
 					}
 				}
-				publish(n);
+				publishArray[i] = n;
+				if (i == publishArray.length - 1) {
+					this.publish((Object[])publishArray);
+					i = 0;
+				}
+				else {
+					i++;
+				}
 			}
+			if (i != 0 && i < publishArray.length - 1) {
+				Node[] a = new Node[i];
+				for (int j = 0; j < i; j++) a[j] = publishArray[j];
+				this.publish((Object[])a);
+			}
+			
 			this.e = this.e - 0.5;
 //			 testing
 //			try {

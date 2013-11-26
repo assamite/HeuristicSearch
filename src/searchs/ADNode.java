@@ -1,24 +1,29 @@
 package searchs;
 
-import java.util.ArrayList;
-
 /**
- * Node for D* Lite.
+ * Node for AD*.
  * @author slinkola
  *
  */
-public class DNode extends Node {
+public class ADNode extends Node {
 	protected double rhs = 0.0;
+	protected double e = 0.0;
 	protected double[] key = {0.0, 0.0};
 	
-	public DNode(int[] xy, double g, double h) {
+	public ADNode(int[] xy, double g, double h) {
 		super(xy, g, h);
 		this.setKey();
 	}
 	
-	public DNode(int[] xy, double g, double h, double rhs) {
+	public ADNode(int[] xy, double g, double h, double rhs, double e) {
 		this(xy, g, h);
 		this.rhs = rhs;
+		this.e = e;
+		this.setKey();
+	}
+	
+	public void setE(double e) {
+		this.e = e;
 		this.setKey();
 	}
 	
@@ -44,8 +49,14 @@ public class DNode extends Node {
 	 * Set key to represent current node values.
 	 */
 	protected void setKey() {
-		this.key[0] = Math.min(this.g, this.rhs) + this.h;
-		this.key[1] = Math.min(this.g, this.rhs);
+		if (this.g > this.rhs) {
+			this.key[0] = this.rhs + (this.e * this.h);
+			this.key[1] = this.rhs;
+		}
+		else {
+			this.key[0] = this.g + this.h;
+			this.key[1] = this.g;
+		}
 	}
 
 	/**
@@ -63,7 +74,7 @@ public class DNode extends Node {
 	
 	@Override
 	protected int compareKeys(Node n) {
-		DNode dn = (DNode)n;
+		ADNode dn = (ADNode)n;
 		double[] dnkey = dn.getKey();
 		if (this.key[0] < dnkey[0])
 			return -1;

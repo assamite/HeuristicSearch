@@ -17,7 +17,7 @@ import robot.SearchBot;
  */
 public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object>{
 	/** Verbose name of the search algorithm. */
-	protected String name = "";
+	protected String name = "Abstract Search";
 	/** Root, i.e starting position, of the robot. */
 	protected int[] root = null;
 	/** Goal position of the robot. */
@@ -98,6 +98,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	/** SwingWorker's overrided method. Called when the task is complete. */
 	public void done() {
 		print("Search thread done.");
+		//this.robot.setPlannedPath(this.path);
 		this.isRunning = false;
 	}
 	
@@ -206,6 +207,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 		if (n.xy[0] == this.goal[0] && n.xy[1] == this.goal[1]) return true;
 		return false;
 	}
+	
 
 	/** Position updates and is the new root for the searches that can process
 	 * altering terrain, etc. */
@@ -217,7 +219,7 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	
 	/** For all those times when System.out.println starts to seriously piss 
 	 * you off. Also easily changed to do logging or to print into info panel.*/
-	protected static void print(String s) {
-		System.out.println(s);
+	protected void print(String s) {
+		System.out.println(this.name + ": " + s);
 	}
 }

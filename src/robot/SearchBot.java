@@ -48,7 +48,7 @@ public class SearchBot {
 	/** Current heuristic search algorithm instance for the robot. */
 	private AbstractSearch search = null;
 	/** Currenly searched nodes. Maintained here for thread safe UI updating. */
-	private ArrayList<Node> searched = new ArrayList<Node>();
+	private ArrayList<int[]> searched = new ArrayList<int[]>();
 	/** Timer for traveling the planned path after it has been set. Replanning
 	 * and clearing the search will cancel the timer and setting the planned 
 	 * path (to something else than null) will create new timer and start it. */
@@ -59,7 +59,7 @@ public class SearchBot {
 	 * robot may be also travelling. */
 	public boolean isSearchStarted = false;
 	/** Color of the drawn searched nodes. */
-	private int[] searchedColor = {255, 0, 255, 40};
+	private int[] searchedColor = {255, 0, 255, 60};
 	
 	private ArrayList<Node> storedPath = new ArrayList<Node>(); 
 	/** Object which can be used in the synchronized -block when updating 
@@ -131,15 +131,12 @@ public class SearchBot {
 		if (this.isSearchStarted) this.replan(changed);
 	}
 	
- 	/** Callback for SwingWorker-subclass search algorithm's done-function. */
+ 	/** Callback for searches to set new planned path, either in the middle 
+ 	 * of the search or at the end. */
  	public void setPlannedPath(ArrayList<Node> path) {
- 		/*
- 		if (this.isTravelling) {
- 			this.travelTimer.cancel();
- 			this.travelTimer.purge();
- 		}
- 		*/
- 		if (path != null) {
+ 		if (path != null && path.size() > 0) {
+ 			this.storedPath = new ArrayList<Node>();
+ 			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
  			this.plannedPath = path;
  			System.out.println(this.storedPath.size());
  			if (this.storedPath.size() != 0) {
@@ -156,10 +153,7 @@ public class SearchBot {
  				}
  				
  			}
- 			this.storedPath = new ArrayList<Node>();
- 			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
- 			System.out.println(this.storedPath.size());
- 
+
  			//int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
  			EventHandler.printInfo("Searched to goal " + this.searched.size());
  			String msg = String.format("To goal: length %d, cost %.5f", 
@@ -188,13 +182,13 @@ public class SearchBot {
 	 */
 	public void updateSearched(List<Object> chunks) {
 		for (Object o: chunks) {
-			this.searched.add((Node)o);
+			this.searched.add(((Node)o).xy);
 		}
 		EventHandler.updateRobot(this, null);
 	}
 	
 	public synchronized void clearSearched() {
-		this.searched.clear();
+		this.searched = new ArrayList<int[]>();
 		EventHandler.updateRobot(this, null);
 		
 	}
@@ -330,8 +324,8 @@ public class SearchBot {
 	 */
 	public synchronized void drawSearched(WritableRaster r) {
 		if (this.searched != null) {
-			for (Node n: this.searched) { 
-				r.setPixel(n.xy[0], n.xy[1], this.searchedColor);
+			for (int[] xy: this.searched) { 
+				r.setPixel(xy[0], xy[1], this.searchedColor);
 			}
 		}
 	}
@@ -361,8 +355,16 @@ public class SearchBot {
 	 * @param gc Graphics context to draw path in.
 	 */
 	private void drawPath(Graphics2D gc) {
-		gc.setColor(UIScheme.MAGENTA);
-		gc.setStroke(new BasicStroke(1, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_BEVEL));	
+		gc.setColor(UIScheme.BLUE_D);
+		gc.setStroke(new BasicStroke(1, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_BEVEL));
+		for (int i = 0; i < this.storedPath.size(); i++) {
+			int[] p1 = this.storedPath.get(i).xy;
+			int x = (int)Math.floor(p1[0]);
+			int y = (int)Math.floor(p1[1]);
+			gc.drawRect(x, y, 1, 1);
+		}
+		
+		gc.setColor(UIScheme.MAGENTA);			
 		for (int i = 0; i < this.traveledPath.size(); i++) {
 			int[] p1 = this.traveledPath.get(i);
 			int x = (int)Math.floor(p1[0]);

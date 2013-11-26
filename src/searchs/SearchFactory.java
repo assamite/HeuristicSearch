@@ -28,7 +28,7 @@ public class SearchFactory {
 			case NAIVE_ANYTIME:
 				return new NaiveAnytime(r, root, goal);
 			case ADSTAR:
-				// Not implemented yet.
+				return new ADStar(r, root, goal);
 			default:
 				return null;
 		}	

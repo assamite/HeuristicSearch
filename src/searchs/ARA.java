@@ -36,12 +36,14 @@ public class ARA extends AbstractSearch {
 		super(r);
 		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
 		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
+		this.name = "ARA*";
 	}
 	
 	public ARA(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
 		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
 		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.root, this.goal), this.e);
+		this.name = "ARA*";
 	}
 	
 	@Override
@@ -53,7 +55,6 @@ public class ARA extends AbstractSearch {
 			if (o instanceof ArrayList<?>) {
 				try {
 					paths.add((ArrayList<Node>)o); 
-					EventHandler.printInfo("ARA* reducing epsilon.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!
@@ -75,11 +76,6 @@ public class ARA extends AbstractSearch {
 		}
 	}
 	
-	@Override
-	/** SwingWorker's overrided method. Called when the task is complete. */
-	public void done() {
-		this.isRunning = false;
-	}
 	
 	@Override
 	/**
@@ -105,7 +101,7 @@ public class ARA extends AbstractSearch {
 	/** Execute ARA* search and publish closed list additions and path 
 	 * improvements as intermediate results. 
 	 */
-	protected void search() {	
+	protected void search() {
 		this.open = new PriorityQueue<EpsNode>();
 		this.open.add(this.goalNode);
 		//this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
@@ -116,6 +112,7 @@ public class ARA extends AbstractSearch {
 		while (this.e > 1.01) {
 			this.robot.clearSearched();
 			this.e = this.e - 0.5;
+			print("Epsilon = " + this.e);
 			
 			synchronized (this.robot.positionLock) {
 				int key = Node.getHashKeyFor(this.position);
@@ -150,7 +147,7 @@ public class ARA extends AbstractSearch {
 			}
 			this.improvePath();
 			this.constructPath();
-			if (this.e == 1.0) 
+			//if (this.e == 1.0) 
 				this.publish(this.path);
 				
 			// testing

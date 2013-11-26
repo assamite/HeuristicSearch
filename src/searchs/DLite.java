@@ -82,12 +82,12 @@ public class DLite extends AbstractSearch {
 	/** Update state/set membership of the node. */
 	protected void updateState(DNode dn) {
 		int dnKey = dn.getHashKey();
-		/*
+		
 		if (!dn.isVisited()) {
 			dn.setG(Double.MAX_VALUE / 2);
 			dn.setMembership(Node.VISITED);
 		}	
-		*/
+		
 		if (!dn.equals(this.goalNode)) {
 			double minG = Double.MAX_VALUE / 2;
 			Node newPrev = null;
@@ -155,10 +155,9 @@ public class DLite extends AbstractSearch {
 					// Do not care about this, user has cancelled the search, etc.
 				}
 				catch (Exception e) {
-					// TODO: notify something about this
+					// Houston, we have a problem.
 					e.printStackTrace();	
-					break;
-					
+					break;	
 				}	
 			}
 		}
@@ -166,7 +165,7 @@ public class DLite extends AbstractSearch {
 	
 	/**
 	 * Compute shortest path between DNodes r and gl. Computation is done 
-	 * "backwards", ie. from gl to r.
+	 * "backwards", i.e. from gl to r.
 	 * @param r current position of the robot, ie. root of the search.
 	 * @param gl robot's goal.
 	 */
@@ -199,6 +198,7 @@ public class DLite extends AbstractSearch {
 		}
 	}
 	
+	
 	/** Create and/or retrieve all neighbors of the node. */
 	protected ArrayList<DNode> neighbors(DNode dn) {
 		ArrayList<int[]> xys = this.getXYs(dn.xy);
@@ -217,6 +217,7 @@ public class DLite extends AbstractSearch {
 		}
 		return neighbors;
 	} 
+	
 	
 	/** Construct shortest path for root node to goal node. */
 	protected void constructPath() {
@@ -250,6 +251,7 @@ public class DLite extends AbstractSearch {
 		}
 	}
 	
+	/** Check is search is currently in goal, i.e. position == goal. */
 	public boolean inGoal() {
 		synchronized (this.robot.positionLock) {
 			if (this.position[0] != this.goal[0]) return false;
@@ -262,40 +264,23 @@ public class DLite extends AbstractSearch {
 	public synchronized DLite replan(double[][] changed) {
 		print("Starting to replan.");
 		this.map = this.robot.getMap();
-		/*
-		while (!this.open.isEmpty()) {
-			DNode d = this.open.remove();
-			d.setMembership(Node.CLOSED);
-		};
-		*/
+		
 		for (int i: this.created.keySet()) {
 			DNode dn = this.created.get(i);
 			dn.setH(this.calcH(dn.xy, this.position));
 		}
-		boolean inpath = false;
+		
 		if (changed != null) {
 			for (double[] xyv: changed) {
 				int[] xy = new int[] { (int)xyv[0], (int)xyv[1] };
 				int hashKey = Node.getHashKeyFor(xy);
 				if (this.created.containsKey(hashKey)) {
 					DNode dn = this.created.get(hashKey);
-					if (this.path.contains(dn)) inpath = true;
 					this.updateState(dn);
 				}
-
 			}
 			print("New open size " + this.open.size());
 		}
-		/*
-		if (inpath) {
-			for (Node n: this.path) {
-				DNode dn = (DNode)n;
-				this.updateState(dn);
-			}
-		}
-		*/
-		
-		print("Expsize " + this.created.size());
 		return this;
 	}
 }
