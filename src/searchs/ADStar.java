@@ -10,16 +10,17 @@ import robot.SearchBot;
 import ui.EventHandler;
 
 /**
- * D* Lite search which uses current knowledge of the nodes in re-planning phase,
- * when new edge costs are observed.
+ * AD* search which uses current knowledge of the nodes in re-planning phase,
+ * when new edge costs are observed and speeds up the search by first inflating
+ * the heuristic with epsilon (>0) value.
+ * 
+ * @see http://www.cs.cmu.edu/~maxim/files/ad_icaps05.pdf
  * @author slinkola
  *
  */
-public class DLite extends AbstractSearch {
+public class ADStar extends AbstractSearch {
 	/** Current open list, contains exactly the inconsistent states. */
 	protected PriorityQueue<DNode> open = new PriorityQueue<DNode>();
-	/** Helper data structure for fast reference to nodes in open list. */
-	protected HashMap<Integer, DNode> openMap = new HashMap<Integer, DNode>();
 	/** All the nodes generated in the current search. */
 	private HashMap<Integer, DNode> created = new HashMap<Integer, DNode>();
 	/** Current goal node. */
@@ -28,22 +29,25 @@ public class DLite extends AbstractSearch {
 	 * changes are detected. */
 	protected DNode rootNode;
 	
-	public DLite(SearchBot r) {
+	/** Current epsilon value. */
+	protected double e = 4;
+	
+	public ADStar(SearchBot r) {
 		super(r);
 		this.rootNode = new DNode(
 				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);
 		this.goalNode = new DNode(
 				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0);
-		this.name = "D* Lite";
+		this.name = "AD*";
 	}
 	
-	public DLite(SearchBot r, int[] root, int[] goal) {
+	public ADStar(SearchBot r, int[] root, int[] goal) {
 		super(r, root, goal);
 		this.rootNode = new DNode(
 				this.root, Double.MAX_VALUE / 2, 0, Double.MAX_VALUE / 2);
 		this.goalNode = new DNode(
 				this.goal, Double.MAX_VALUE / 2, this.calcH(this.goal, this.root), 0);
-		this.name = "D* Lite";
+		this.name = "AD*";
 		
 	}
 	
@@ -151,9 +155,6 @@ public class DLite extends AbstractSearch {
 					synchronized(this) { this.wait(); }
 					print("Thread notified. Starting new search iteration.");
 				}
-				catch (InterruptedException ie) {
-					// Do not care about this, user has cancelled the search, etc.
-				}
 				catch (Exception e) {
 					// TODO: notify something about this
 					e.printStackTrace();	
@@ -180,7 +181,6 @@ public class DLite extends AbstractSearch {
 			dn.setMembership(Node.CLOSED);
 			//print(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1]);
 			//print(dn.getKey()[0] + " " + dn.getKey()[1] + " " + r.getKey()[0] + " " + r.getKey()[1]);
-			//this.created.put(dn.getHashKey(), dn);
 			this.publish(dn);
 			if (dn.getG() > dn.getRhs()) {
 				dn.setG(dn.getRhs());
@@ -210,7 +210,7 @@ public class DLite extends AbstractSearch {
 				n = this.created.get(Node.getHashKeyFor(xy));
  			}
 			else {
-				n = new DNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.position), Double.MAX_VALUE / 2);
+				n = new DNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), Double.MAX_VALUE / 2);
 				this.created.put(n.getHashKey(), n);
 			}
 			neighbors.add(n);
@@ -259,7 +259,7 @@ public class DLite extends AbstractSearch {
 	}
 	
 	/** Replan the current route with the information of the changed pixels. */
-	public synchronized DLite replan(double[][] changed) {
+	public synchronized ADStar replan(double[][] changed) {
 		print("Starting to replan.");
 		this.map = this.robot.getMap();
 		/*
@@ -272,30 +272,21 @@ public class DLite extends AbstractSearch {
 			DNode dn = this.created.get(i);
 			dn.setH(this.calcH(dn.xy, this.position));
 		}
-		boolean inpath = false;
+		
 		if (changed != null) {
 			for (double[] xyv: changed) {
 				int[] xy = new int[] { (int)xyv[0], (int)xyv[1] };
 				int hashKey = Node.getHashKeyFor(xy);
 				if (this.created.containsKey(hashKey)) {
 					DNode dn = this.created.get(hashKey);
-					if (this.path.contains(dn)) inpath = true;
 					this.updateState(dn);
 				}
 
 			}
 			print("New open size " + this.open.size());
 		}
-		/*
-		if (inpath) {
-			for (Node n: this.path) {
-				DNode dn = (DNode)n;
-				this.updateState(dn);
-			}
-		}
-		*/
-		
-		print("Expsize " + this.created.size());
+		print("Created size " + this.created.size());
+		//synchronized(this) {this.notify();}
 		return this;
 	}
 }

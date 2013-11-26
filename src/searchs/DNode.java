@@ -8,8 +8,8 @@ import java.util.ArrayList;
  *
  */
 public class DNode extends Node {
-	protected double rhs = 0;
-	protected double[] key = {0, 0};
+	protected double rhs = 0.0;
+	protected double[] key = {0.0, 0.0};
 	
 	public DNode(int[] xy, double g, double h) {
 		super(xy, g, h);
@@ -22,6 +22,7 @@ public class DNode extends Node {
 		this.setKey();
 	}
 	
+	@Override
 	public void setH(double h) {
 		this.h = h;
 		this.setKey();

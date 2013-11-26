@@ -20,8 +20,6 @@ public class AStar extends AbstractSearch {
 	PriorityQueue<Node> open = new PriorityQueue<Node>();
 	/** All created nodes. */
 	HashMap<Integer, Node> created = new HashMap<Integer, Node>();
-	/** Closed nodes list. */
-	private HashMap<Integer, Node> closed = new HashMap<Integer, Node>();
 
 	public AStar(SearchBot r) {
 		super(r);
@@ -79,9 +77,8 @@ public class AStar extends AbstractSearch {
 				this.constructPath(n);
 				continue;
 			}
-			this.closed.put(n.getHashKey(), n);
 			n.setMembership(Node.CLOSED);
-			Node[] childs = this.childs(n);
+			Node[] childs = this.neighbors(n);
 			for (Node c: childs) {
 				int key = c.getHashKey();
 				if (this.created.containsKey(key)) {
@@ -92,13 +89,14 @@ public class AStar extends AbstractSearch {
 						}
 						else {
 							c.setG(n.getG() + cost);
+							c.prev = n;
 							c.setMembership(Node.OPEN);
 							this.open.add(c);
 						}
 					}
 					else if (c.isOpen()) {
-						if (c.getG() < n.getG() + cost) {
-							c.setG(c.getG() + cost);
+						if (c.getG() > n.getG() + cost) {
+							c.setG(n.getG() + cost);
 							this.open.remove(c);
 							this.open.add(c);
 						}
@@ -107,6 +105,7 @@ public class AStar extends AbstractSearch {
 					
 				}
 				else {
+					c.setMembership(Node.OPEN);
 					this.open.add(c);	
 					this.created.put(key, c);
 				}
@@ -117,27 +116,29 @@ public class AStar extends AbstractSearch {
 	}
 	
 	/**
-	 * Create child nodes for given node.
+	 * Create neighbor nodes for given node.
 	 * 
-	 * @param n Node whose childs are created.
+	 * @param n Node whose neighbors are created.
 	 * @return
 	 */
-	protected Node[] childs(Node n) {
+	protected Node[] neighbors(Node n) {
 		ArrayList<int[]> xys = this.getXYs(n.xy);
 		double[] costs = this.getCosts(xys);
 		double ncost = n.getG();
-		Node[] childs = new Node[costs.length];
+		Node[] neighbors = new Node[costs.length];
 		for (int i = 0; i < costs.length; i++) {
 			int[] xy = xys.get(i);
 			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
-				childs[i] = this.created.get(Node.getHashKeyFor(xy));
+				Node nn = this.created.get(Node.getHashKeyFor(xy));
+				neighbors[i] = nn;
 			}
 			else {
-				childs[i] = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal));
-				childs[i].prev = n;
+				Node nn = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal));
+				nn.prev = n;
+				neighbors[i] = nn;
 			}
 		}
-		return childs;
+		return neighbors;
 	}
 	
 	/**

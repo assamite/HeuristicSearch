@@ -141,7 +141,6 @@ public class SearchBot {
  		*/
  		if (path != null) {
  			this.plannedPath = path;
- 			/*
  			System.out.println(this.storedPath.size());
  			if (this.storedPath.size() != 0) {
  				if (this.storedPath.size() != this.plannedPath.size()) 
@@ -151,7 +150,7 @@ public class SearchBot {
  						Node n1 = this.plannedPath.get(i);
  						Node n2 = this.storedPath.get(i);
  						System.out.println(n1.xy[0] + " " + n1.xy[1] + " " + 
- 						n1.getG() + " - " + n2.xy[0] + " " + n2.xy[1] + " " + n2.getG());
+ 						n1.getG() + " - " + n2.xy[0] + " " + n2.xy[1] + " " + n2.getG() + " = " + (n1.getG() - n2.getG()));
  						//if (n1.getG() != n2.getG()) System.out.println("OOOOOOOPS!");
  					}
  				}
@@ -160,17 +159,26 @@ public class SearchBot {
  			this.storedPath = new ArrayList<Node>();
  			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
  			System.out.println(this.storedPath.size());
- 			*/
+ 
  			//int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
  			EventHandler.printInfo("Searched to goal " + this.searched.size());
- 			String msg = String.format("To goal: length %d, cost %.2f", 
- 					path.size(), path.get(0).getG());
+ 			String msg = String.format("To goal: length %d, cost %.5f", 
+ 					path.size(), this.getPathCost());
  			EventHandler.updateRobot(this, msg);
  			this.startTravel(100);
  		}
  		else {
  			EventHandler.updateRobot(this, "No path found!");
  		}
+ 	}
+ 	
+ 	/** Get cost of currently planned path */
+ 	public double getPathCost() {
+ 		double c = 0.0;
+ 		for (Node n: this.plannedPath) {
+ 			c += this.search.getCost(this.search.getMap(), n.xy);
+ 		}
+ 		return c;
  	}
 	
 	/**
@@ -193,9 +201,9 @@ public class SearchBot {
 	
 	/** Start searching for path plan. Replanning is done automatically when
 	 * setMap is called. */
-	public void startSearch() {
-		this.isSearchStarted = true;	
+	public void startSearch() {	
 		if (this.search != null) {
+			this.isSearchStarted = true;
 			EventHandler.printInfo("Starting " + this.search.getName() + " search with:");
 			EventHandler.printInfo(String.format("Root: (%d, %d), Goal: (%d, %d)", this.root[0], this.root[1], this.goal[0], this.goal[1]));
 			this.search.execute();

@@ -23,10 +23,8 @@ import ui.EventHandler;
 public class ARA extends AbstractSearch {
 	/** Current open list, which uses private comparator class. */
 	PriorityQueue<EpsNode> open = new PriorityQueue<EpsNode>();
-	/** Helper data structure for ease of referring nodes in open list. */
-	//HashMap<Integer, Node> openMap = new HashMap<Integer, Node>();
 	/** All extended states. */
-	private HashMap<Integer, EpsNode> expanded = new HashMap<Integer, EpsNode>();
+	private HashMap<Integer, EpsNode> created = new HashMap<Integer, EpsNode>();
 	/** Current goal node. */
 	protected EpsNode goalNode;
 	/** Current root node. */
@@ -118,17 +116,30 @@ public class ARA extends AbstractSearch {
 		while (this.e > 1.01) {
 			this.robot.clearSearched();
 			this.e = this.e - 0.5;
+			
+			synchronized (this.robot.positionLock) {
+				int key = Node.getHashKeyFor(this.position);
+				if (this.created.containsKey(key)) {
+					this.rootNode = this.created.get(key);
+					this.rootNode.setH(0.0);
+					print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
+				}
+			}
+			
 			// Ugh. This is quite stupid, but has to be done so that the
 			// priorities get updated
 			PriorityQueue<EpsNode> newPQ = new PriorityQueue<EpsNode>();
 			for (EpsNode n: this.open) { 
+				n.setH(this.calcH(n.xy, this.rootNode.xy));
 				n.setE(this.e);
 				newPQ.add(n); 
 			}
 			this.open = newPQ;
 
-			for (int key: this.expanded.keySet()) {
-				EpsNode an = this.expanded.get(key);
+			for (int key: this.created.keySet()) {
+				EpsNode an = this.created.get(key);
+				an.setH(this.calcH(an.xy, this.rootNode.xy));
+				an.setE(this.e);
 				if (an.isInconsistent()) { 
 					an.setMembership(Node.OPEN);
 					this.open.add(an);
@@ -139,7 +150,7 @@ public class ARA extends AbstractSearch {
 			}
 			this.improvePath();
 			this.constructPath();
-			//if (this.e == 1.0) 
+			if (this.e == 1.0) 
 				this.publish(this.path);
 				
 			// testing
@@ -172,9 +183,9 @@ public class ARA extends AbstractSearch {
 			else {
 				i++;
 			}
-			for (EpsNode n: this.pred(node)) {
-				if (n.g > this.getCost(this.map, node.xy) + node.g) {
-					n.g = this.getCost(this.map, node.xy) + node.g;
+			for (EpsNode n: this.neighbors(node)) {
+				if (n.g > this.getCost(this.map, n.xy) + node.g) {
+					n.g = this.getCost(this.map, n.xy) + node.g;
 					n.prev = node;
 					if (!n.isClosed()) {
 						n.setMembership(Node.OPEN);
@@ -226,44 +237,18 @@ public class ARA extends AbstractSearch {
 					n.prev = an;
 				}
 			}
-			if (this.expanded.containsKey(Node.getHashKeyFor(xy))) {
-				n = this.expanded.get(Node.getHashKeyFor(xy));
-				//if (!n.isVisited()) { continue; }
+			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+				n = this.created.get(Node.getHashKeyFor(xy));
  			} 
 			else {
 				n = new EpsNode(xy, Double.MAX_VALUE / 2, this.calcH(xy, this.root), this.e);
-				this.expanded.put(n.getHashKey(), n);
+				this.created.put(n.getHashKey(), n);
 				n.prev = an;
 			}
 			neighbors.add(n);
 		}
 		return neighbors;
 	} 
-	
-	protected ArrayList<EpsNode> succ(EpsNode n) {
-		ArrayList<EpsNode> succ = this.neighbors(n);
-
-		int i = 0;
-		double g = n.getG();
-		while (succ.size() > 0 && i < succ.size()) {
-			EpsNode s = succ.get(i);
-			if (s.getG() >= g) succ.remove(s);
-			else i++;
-		}
-		return succ;
-	}
-	
-	protected ArrayList<EpsNode> pred(EpsNode n) {
-		ArrayList<EpsNode> pred = this.neighbors(n);
-		int i = 0;
-		double g = n.getG();
-		while (pred.size() > 0 && i < pred.size()) {
-			EpsNode s = pred.get(i);
-			if (s.getG() < g) pred.remove(s);
-			else i++;
-		}
-		return pred;
-	}
 	
 	@Override
 	protected boolean isGoal(Node n) {

@@ -116,17 +116,16 @@ public class NaiveAnytime extends AbstractSearch {
 				if (this.isGoal(n)) {
 					found = true;
 					this.constructPath(n);
-					this.publish(this.path);
+					if (this.e == 0) this.publish(this.path);
+					continue;
 				}
-				this.created.put(n.getHashKey(), n);
-				n.setMembership(Node.CLOSED);;
-				EpsNode[] childs = this.childs(n);
-				for (EpsNode c: childs) {
+				n.setMembership(Node.CLOSED);
+				for (EpsNode c: this.neighbors(n)) {
 					int key = c.getHashKey();
 					if (this.created.containsKey(key)) {
 						double cost = this.getCost(this.map, c.xy);
 						if (c.isClosed()) {
-							if (n.getG() + cost >= c.getG()) { 
+							if (n.getG() + cost > c.getG()) { 
 								continue;
 							}
 							else {
@@ -136,16 +135,15 @@ public class NaiveAnytime extends AbstractSearch {
 							}
 						}
 						else if (c.isOpen()) {
-							if (c.getG() < n.getG() + cost) {
-								c.setG(c.getG() + cost);
+							if (c.getG() > n.getG() + cost) {
+								c.setG(n.getG() + cost);
 								this.open.remove(c);
 								this.open.add(c);
-							}
-							
+							}	
 						}
-						
 					}
 					else {
+						c.setMembership(Node.OPEN);
 						this.open.add(c);	
 						this.created.put(key, c);
 					}
@@ -163,22 +161,29 @@ public class NaiveAnytime extends AbstractSearch {
 	}
 	
 	/**
-	 * Create child nodes for given node.
+	 * Create neighbor nodes for given node.
 	 * 
-	 * @param n Node whose childs are created.
+	 * @param n Node whose neighbors are created.
 	 * @return
 	 */
-	protected EpsNode[] childs(Node n) {
+	protected EpsNode[] neighbors(Node n) {
 		ArrayList<int[]> xys = this.getXYs(n.xy);
 		double[] costs = this.getCosts(xys);
 		double ncost = n.getG();
-		EpsNode[] childs = new EpsNode[costs.length];
+		EpsNode[] neighbors = new EpsNode[costs.length];
 		for (int i = 0; i < costs.length; i++) {
 			int[] xy = xys.get(i);
-			childs[i] = new EpsNode(xy, ncost + costs[i], this.calcH(xy, this.goal), this.e);
-			childs[i].prev = n;
+			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+				EpsNode nn = this.created.get(Node.getHashKeyFor(xy));
+				neighbors[i] = nn;
+			}
+			else {
+				EpsNode nn = new EpsNode(xy, ncost + costs[i], this.calcH(xy, this.goal), this.e);
+				nn.prev = n;
+				neighbors[i] = nn;
+			}
 		}
-		return childs;
+		return neighbors;
 	}
 	
 	/**

@@ -61,6 +61,10 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 		return this.name;
 	}
 	
+	public Raster getMap() {
+		return this.map;
+	}
+	
 	public synchronized void setPosition(int[] xy) {
 		this.position = xy;
 	}
