@@ -161,10 +161,10 @@ public class SearchBot {
  			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
  			System.out.println(this.storedPath.size());
  			*/
- 			int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
+ 			//int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
  			EventHandler.printInfo("Searched to goal " + this.searched.size());
  			String msg = String.format("To goal: length %d, cost %.2f", 
- 					path.size(), path.get(idx).getG());
+ 					path.size(), path.get(0).getG());
  			EventHandler.updateRobot(this, msg);
  			this.startTravel(100);
  		}

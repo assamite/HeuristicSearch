@@ -3,9 +3,12 @@ package searchs;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.PriorityQueue;
 
 import robot.SearchBot;
+import ui.EventHandler;
 
 /** Class that implements naive anytime search by inflating A* heuristic with
  * epsilon modifier. */
@@ -15,7 +18,7 @@ public class NaiveAnytime extends AbstractSearch {
 	/** Helper data structure for ease of referring nodes in open list. */
 	HashMap<Integer, EpsNode> openMap = new HashMap<Integer, EpsNode>();
 	/** Closed nodes list. */
-	private HashMap<Integer, EpsNode> closed = new HashMap<Integer, EpsNode>();
+	private HashMap<Integer, EpsNode> created = new HashMap<Integer, EpsNode>();
 	
 	protected double e = 4;
 
@@ -44,6 +47,37 @@ public class NaiveAnytime extends AbstractSearch {
 	}
 	
 	@Override
+	/** SwingWorker's overrided method, called when publish is called for 
+	 * interim results. Adds chunks to robot's searched node list. */
+	protected void process(List<Object> chunks) {
+		LinkedList<ArrayList<Node>> paths = new LinkedList<ArrayList<Node>>();
+		for (Object o: chunks) {
+			if (o instanceof ArrayList<?>) {
+				try {
+					paths.add((ArrayList<Node>)o); 
+					EventHandler.printInfo("NAA* reducing epsilon.");
+				}
+				catch (ClassCastException e) {
+					// Published something else than Node ArrayList!
+				}
+			}
+		}
+		if (paths.size() > 0) {
+			ArrayList<Node> p = paths.getLast();
+			
+			while (paths.size() > 0) {
+				ArrayList<Node> r = paths.remove();
+				chunks.remove(r);
+			}
+			this.robot.updateSearched(chunks);
+			this.robot.setPlannedPath(p);
+		}
+		else {
+			this.robot.updateSearched(chunks);
+		}
+	}
+	
+	@Override
 	/**
 	 * Replan the route
 	 * @params changed omitted, since A* does not remember anything and thus
@@ -60,7 +94,7 @@ public class NaiveAnytime extends AbstractSearch {
 				// TODO: do something with this.
 			}
 		}	
-		return new NaiveAnytime(this.robot, this.position, this.goal);
+		return new NaiveAnytime(this.robot, this.position, this.root);
 	}
 	
 	@Override
@@ -69,12 +103,13 @@ public class NaiveAnytime extends AbstractSearch {
 	 */
 	protected synchronized void search() {	
 		while (this.e >= 1.0) {
-			this.open.clear();
-			this.closed.clear();
+			this.open = new PriorityQueue<EpsNode>();
+			this.created = new HashMap<Integer, EpsNode>();
 			EpsNode r = new EpsNode(this.root, 0, this.calcH(this.root, this.goal), this.e);
+			r.setMembership(Node.OPEN);
 			open.add(r);
-			this.openMap.put(r.getHashKey(), r);
 			boolean found = false;
+			print(this.e + "");
 			
 			while (!found && !this.open.isEmpty() && !this.isCancelled()) {
 				EpsNode n = this.open.remove();
@@ -82,37 +117,47 @@ public class NaiveAnytime extends AbstractSearch {
 					found = true;
 					this.constructPath(n);
 					this.publish(this.path);
-					continue;
 				}
-				this.closed.put(n.getHashKey(), n);
+				this.created.put(n.getHashKey(), n);
+				n.setMembership(Node.CLOSED);;
 				EpsNode[] childs = this.childs(n);
 				for (EpsNode c: childs) {
 					int key = c.getHashKey();
-					if (this.closed.containsKey(key)) {
-						EpsNode c1 = this.closed.get(key);
-						if (c.getG() >= c1.getG()) { 
-							continue;
+					if (this.created.containsKey(key)) {
+						double cost = this.getCost(this.map, c.xy);
+						if (c.isClosed()) {
+							if (n.getG() + cost >= c.getG()) { 
+								continue;
+							}
+							else {
+								c.setG(n.getG() + cost);
+								c.setMembership(Node.OPEN);
+								this.open.add(c);
+							}
 						}
-					}
-					if (this.openMap.containsKey(key)) {
-						EpsNode c1 = this.openMap.get(key);
-						if (c.getG() < c1.getG()) {
-							c1.setG(c.getG());
+						else if (c.isOpen()) {
+							if (c.getG() < n.getG() + cost) {
+								c.setG(c.getG() + cost);
+								this.open.remove(c);
+								this.open.add(c);
+							}
+							
 						}
+						
 					}
 					else {
 						this.open.add(c);	
-						this.openMap.put(key, c);
+						this.created.put(key, c);
 					}
 				}
 				publish(n);
 			}
 			this.e = this.e - 0.5;
-			// testing
-			try {
-				Thread.sleep(150);
-			}
-			catch (InterruptedException ex) { }
+//			 testing
+//			try {
+//				Thread.sleep(150);
+//			}
+//			catch (InterruptedException ex) { }
 		}
 		
 	}
@@ -150,7 +195,6 @@ public class NaiveAnytime extends AbstractSearch {
 				this.path.add(goalNode.prev);
 				goalNode = goalNode.prev;
 			}
-			Collections.reverse(this.path);
 		}
 		else {
 			this.path = null;	

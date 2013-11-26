@@ -22,6 +22,11 @@ public class DNode extends Node {
 		this.setKey();
 	}
 	
+	public void setH(double h) {
+		this.h = h;
+		this.setKey();
+	}
+	
 	@Override
 	public void setG(double g) {
 		this.g = g;

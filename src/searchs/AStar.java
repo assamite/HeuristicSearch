@@ -58,7 +58,7 @@ public class AStar extends AbstractSearch {
 				// TODO: do something with this.
 			}
 		}	
-		return new AStar(this.robot, this.position, this.goal);
+		return new AStar(this.robot, this.position, this.root);
 	}
 	
 	@Override
@@ -154,7 +154,6 @@ public class AStar extends AbstractSearch {
 				this.path.add(goalNode.prev);
 				goalNode = goalNode.prev;
 			}
-			Collections.reverse(this.path);
 		}
 		else {
 			this.path = null;	

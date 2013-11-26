@@ -143,10 +143,10 @@ public class ARA extends AbstractSearch {
 				this.publish(this.path);
 				
 			// testing
-			try {
-				Thread.sleep(150);
-			}
-			catch (InterruptedException e) { }
+//			try {
+//				Thread.sleep(150);
+//			}
+//			catch (InterruptedException e) { }
 		}
 		
 		EventHandler.printInfo("ARA* stopped search.");
