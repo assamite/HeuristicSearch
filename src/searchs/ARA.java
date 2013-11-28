@@ -57,6 +57,7 @@ public class ARA extends AbstractSearch {
 					paths.add((ArrayList<Node>)o); 
 				}
 				catch (ClassCastException e) {
+					e.printStackTrace();
 					// Published something else than Node ArrayList!
 				}
 			}
@@ -227,14 +228,14 @@ public class ARA extends AbstractSearch {
 		
 		for (int[] xy: xys) {
 			EpsNode n;
-			if (xy[0] == this.position[0] && xy[1] == this.position[1]) {
+			if (xy[0] == this.rootNode.xy[0] && xy[1] == this.rootNode.xy[1]) {
 				n = this.rootNode;
 				if (an.getG() + this.getCost(this.map, n.xy) < n.getG()) {
 					n.setG(an.getG() + this.getCost(this.map, n.xy));
 					n.prev = an;
 				}
 			}
-			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+			else if (this.created.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.created.get(Node.getHashKeyFor(xy));
  			} 
 			else {

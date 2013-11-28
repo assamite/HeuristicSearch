@@ -15,10 +15,11 @@ import ui.EventHandler;
 public class NaiveAnytime extends AbstractSearch {
 	/** Current open list. */
 	PriorityQueue<EpsNode> open = new PriorityQueue<EpsNode>();
-	/** Helper data structure for ease of referring nodes in open list. */
-	HashMap<Integer, EpsNode> openMap = new HashMap<Integer, EpsNode>();
-	/** Closed nodes list. */
+	/** All created nodes. */
 	private HashMap<Integer, EpsNode> created = new HashMap<Integer, EpsNode>();
+	
+	private EpsNode rootNode = null;
+	private EpsNode goalNode = null;
 	
 	protected double e = 4;
 
@@ -29,43 +30,52 @@ public class NaiveAnytime extends AbstractSearch {
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal) {
 		// Search from goal to root.
-		super(r, goal, root);
+		super(r, root, goal);
+		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
+		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.goal, this.root), this.e);
 		this.name = "NAA*";
 	}
 	
 	public NaiveAnytime(SearchBot r, int[] root, int[] goal, double eps) {
-		super(r, goal, root);
+		this(r, root, goal);
+		this.rootNode = new EpsNode(this.root, Double.MAX_VALUE / 2, 0, this.e);
+		this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.goal, this.root), this.e);
 		this.e = eps;
-		this.name = "NAA*";
 	}
 	
 	@Override
 	/** SwingWorker's overrided method, called when publish is called for 
 	 * interim results. Adds chunks to robot's searched node list. */
 	protected void process(List<Object> chunks) {
-		LinkedList<ArrayList<Node>> paths = new LinkedList<ArrayList<Node>>();
-		for (Object o: chunks) {
-			if (o instanceof ArrayList<?>) {
-				try {
-					paths.add((ArrayList<Node>)o); 
-				}
-				catch (ClassCastException e) {
-					// Published something else than Node ArrayList!
+		try {
+			LinkedList<ArrayList<Node>> paths = new LinkedList<ArrayList<Node>>();
+			for (Object o: chunks) {
+				if (o instanceof ArrayList<?>) {
+					try {
+						paths.add((ArrayList<Node>)o); 
+					}
+					catch (ClassCastException e) {
+						e.printStackTrace();
+						// Published something else than Node ArrayList!
+					}
 				}
 			}
-		}
-		if (paths.size() > 0) {
-			ArrayList<Node> p = paths.getLast();
-			
-			while (paths.size() > 0) {
-				ArrayList<Node> r = paths.remove();
-				chunks.remove(r);
+			if (paths.size() > 0) {
+				ArrayList<Node> p = paths.getLast();
+				
+				while (paths.size() > 0) {
+					ArrayList<Node> r = paths.remove();
+					chunks.remove(r);
+				}
+				this.robot.updateSearched(chunks);
+				this.robot.setPlannedPath(p);
 			}
-			this.robot.updateSearched(chunks);
-			this.robot.setPlannedPath(p);
-		}
-		else {
-			this.robot.updateSearched(chunks);
+			else {
+				this.robot.updateSearched(chunks);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
@@ -83,10 +93,11 @@ public class NaiveAnytime extends AbstractSearch {
 				Thread.sleep(10); 
 			}
 			catch (Exception ex) {
+				ex.printStackTrace();
 				// TODO: do something with this.
 			}
 		}	
-		return new NaiveAnytime(this.robot, this.position, this.root);
+		return new NaiveAnytime(this.robot, this.position, this.goal);
 	}
 	
 	@Override
@@ -99,37 +110,51 @@ public class NaiveAnytime extends AbstractSearch {
 		while (this.e >= 1.0) {
 			int i = 0;
 			this.robot.clearSearched();
-			this.open = new PriorityQueue<EpsNode>();
-			this.created = new HashMap<Integer, EpsNode>();
-			synchronized (this.robot.positionLock) { 
-				EpsNode r = new EpsNode(this.root, 0, this.calcH(this.root, this.goal), this.e);
-				r.setMembership(Node.OPEN);
-				open.add(r);
+			try {
+				Thread.sleep(150);
 			}
+			catch (Exception e) {}
+			this.open = null;
+			this.open = new PriorityQueue<EpsNode>();
+			this.created = null;
+			this.created = new HashMap<Integer, EpsNode>();
+			 
+			this.rootNode = new EpsNode(this.position, Double.MAX_VALUE / 2, 0, this.e);
+			this.rootNode.setMembership(Node.CLOSED);
+			this.created.put(this.rootNode.getHashKey(), this.rootNode);
+			print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 
+			this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.goal, this.rootNode.xy), this.e);
+			this.created.put(this.goalNode.getHashKey(), this.goalNode);
+			this.open.add(this.goalNode);
 			boolean found = false;
 			print("Epsilon = " + this.e);
+			print("Starting to compute path.");
 			
 			while (!found && !this.open.isEmpty() && !this.isCancelled()) {
 				EpsNode n = this.open.remove();
-				if (this.isGoal(n)) {
+				n.setMembership(Node.CLOSED);
+				
+				if (n.equals(this.rootNode)) { // Searching backwards
+					print("Path computed.");
 					found = true;
-					this.constructPath(n);
+					this.constructPath();
 					//if (this.e == 0) 
 						this.publish(this.path);
-					continue;
+					break;
 				}
-				n.setMembership(Node.CLOSED);
+				
 				for (EpsNode c: this.neighbors(n)) {
 					int key = c.getHashKey();
 					if (this.created.containsKey(key)) {
 						double cost = this.getCost(this.map, c.xy);
 						if (c.isClosed()) {
-							if (n.getG() + cost > c.getG()) { 
+							if (n.getG() + cost >= c.getG()) { 
 								continue;
 							}
 							else {
 								c.setG(n.getG() + cost);
+								c.prev = n;
 								c.setMembership(Node.OPEN);
 								this.open.add(c);
 							}
@@ -137,6 +162,7 @@ public class NaiveAnytime extends AbstractSearch {
 						else if (c.isOpen()) {
 							if (c.getG() > n.getG() + cost) {
 								c.setG(n.getG() + cost);
+								c.prev = n;
 								this.open.remove(c);
 								this.open.add(c);
 							}	
@@ -157,13 +183,19 @@ public class NaiveAnytime extends AbstractSearch {
 					i++;
 				}
 			}
-			if (i != 0 && i < publishArray.length - 1) {
-				Node[] a = new Node[i];
-				for (int j = 0; j < i; j++) a[j] = publishArray[j];
-				this.publish((Object[])a);
+			if (found) {
+				if (i != 0 && i < publishArray.length - 1) {
+					Node[] a = new Node[i];
+					for (int j = 0; j < i; j++) a[j] = publishArray[j];
+					this.publish((Object[])a);
+				}
+			}
+			else {
+				print("Path not found.");
+				break;
 			}
 			
-			this.e = this.e - 0.5;
+			this.e -= 0.5;
 //			 testing
 //			try {
 //				Thread.sleep(150);
@@ -179,39 +211,46 @@ public class NaiveAnytime extends AbstractSearch {
 	 * @param n Node whose neighbors are created.
 	 * @return
 	 */
-	protected EpsNode[] neighbors(Node n) {
-		ArrayList<int[]> xys = this.getXYs(n.xy);
-		double[] costs = this.getCosts(xys);
-		double ncost = n.getG();
-		EpsNode[] neighbors = new EpsNode[costs.length];
-		for (int i = 0; i < costs.length; i++) {
-			int[] xy = xys.get(i);
-			if (this.created.containsKey(Node.getHashKeyFor(xy))) {
-				EpsNode nn = this.created.get(Node.getHashKeyFor(xy));
-				neighbors[i] = nn;
+	/** Create and/or retrieve all neighbors of the node. */
+	protected ArrayList<EpsNode> neighbors(EpsNode an) {
+		ArrayList<int[]> xys = this.getXYs(an.xy);
+		ArrayList<EpsNode> neighbors = new ArrayList<EpsNode>();
+		
+		for (int[] xy: xys) {
+			EpsNode n;
+
+			if (xy[0] == this.rootNode.xy[0] && xy[1] == this.rootNode.xy[1]) {
+				print("Root node!");
+				n = this.rootNode;
+				if (an.getG() + this.getCost(this.map, n.xy) < n.getG()) {
+					n.setG(an.getG() + this.getCost(this.map, n.xy));
+					n.prev = an;
+				}
 			}
+
+			else if (this.created.containsKey(Node.getHashKeyFor(xy))) {
+				n = this.created.get(Node.getHashKeyFor(xy));
+ 			} 
 			else {
-				EpsNode nn = new EpsNode(xy, ncost + costs[i], this.calcH(xy, this.goal), this.e);
-				nn.prev = n;
-				neighbors[i] = nn;
+				n = new EpsNode(xy, an.getG() + this.getCost(this.map, xy) , this.calcH(xy, this.root), this.e);
+				n.prev = an;
 			}
+			neighbors.add(n);
 		}
 		return neighbors;
-	}
+	} 
 	
-	/**
-	 * Construct path from root to goal. Is no goal node is given, current
-	 * path is set to null;
-	 * @param goalNode goal node from which the path is started to construct.
-	 */
-	protected void constructPath(Node goalNode) {
-		if (goalNode != null) {
+	/** Construct shortest path for root node to goal node. */
+	protected void constructPath() {
+		print("Constructing path.");
+		Node gn = this.rootNode;
+		if (gn != null) {
 			//EventHandler.printInfo(String.format("Goal node found with %d expansions", expanded));
 			this.path = new ArrayList<Node>();
-			this.path.add(goalNode);
-			while (goalNode.prev != null) {
-				this.path.add(goalNode.prev);
-				goalNode = goalNode.prev;
+			this.path.add(gn);
+			while (gn.prev != null) {
+				this.path.add(gn.prev);
+				gn = gn.prev;
 			}
 		}
 		else {

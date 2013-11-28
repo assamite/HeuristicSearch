@@ -109,7 +109,8 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 		this.robot.updateSearched(chunks);
 	}
 	
-	/** Override in subclass! */
+	/** Main search function, which is called by doInBackground function. 
+	 * Override in subclass! */
 	protected synchronized void search() { }
 	
 	/**
@@ -212,9 +213,11 @@ public abstract class AbstractSearch extends SwingWorker<ArrayList<Node>, Object
 	/** Position updates and is the new root for the searches that can process
 	 * altering terrain, etc. */
 	protected boolean isPosition(Node n) {
-		if (n.xy[0] == this.position[0] && n.xy[1] == this.position[1])
-			return true;
-		return false;
+		synchronized (this.robot.positionLock) {
+			if (n.xy[0] == this.position[0] && n.xy[1] == this.position[1])
+				return true;
+			return false;
+		}
 	}
 	
 	/** For all those times when System.out.println starts to seriously piss 

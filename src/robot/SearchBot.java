@@ -65,6 +65,9 @@ public class SearchBot {
 	/** Object which can be used in the synchronized -block when updating 
 	 * position status.*/
 	public Object positionLock = new Object();
+	/** Object which can be used in the synchronized -block when updating 
+	 * or clearing searched list.*/
+	public Object searchedLock = new Object();
 	
 	public SearchBot(BufferedImage map, SearchType searchType) {
 		this.map = map.getData();	
@@ -135,6 +138,9 @@ public class SearchBot {
  	 * of the search or at the end. */
  	public void setPlannedPath(ArrayList<Node> path) {
  		if (path != null && path.size() > 0) {
+ 			this.plannedPath = path;
+ 			/*
+ 			try {
  			this.storedPath = new ArrayList<Node>();
  			for (Node n: this.plannedPath) { this.storedPath.add(n.clone()); }
  			this.plannedPath = path;
@@ -151,9 +157,12 @@ public class SearchBot {
  						//if (n1.getG() != n2.getG()) System.out.println("OOOOOOOPS!");
  					}
  				}
- 				
  			}
-
+ 			}
+ 			catch (Exception e) {
+ 				e.printStackTrace();
+ 			}
+			*/
  			//int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
  			EventHandler.printInfo("Searched to goal " + this.searched.size());
  			String msg = String.format("To goal: length %d, cost %.5f", 
@@ -181,14 +190,19 @@ public class SearchBot {
 	 * search.
 	 */
 	public void updateSearched(List<Object> chunks) {
-		for (Object o: chunks) {
-			this.searched.add(((Node)o).xy);
+		synchronized (this.searchedLock) {
+			for (Object o: chunks) {
+				this.searched.add(((Node)o).xy);
+			}
 		}
 		EventHandler.updateRobot(this, null);
 	}
 	
-	public synchronized void clearSearched() {
-		this.searched = new ArrayList<int[]>();
+	public void clearSearched() {
+		System.out.println("Robot: Clearing search.");
+		synchronized(this.searchedLock) {
+			this.searched = new ArrayList<int[]>();
+		}
 		EventHandler.updateRobot(this, null);
 		
 	}
@@ -225,7 +239,9 @@ public class SearchBot {
 		}
 		this.traveledPath.clear();
 		this.plannedPath.clear();
-		this.searched.clear();
+		this.travelTimer.cancel();
+		this.travelTimer.purge();
+		synchronized (this.searchedLock) { this.searched.clear(); }
 		this.isSearchStarted = false;
 	}
 	
@@ -238,6 +254,7 @@ public class SearchBot {
 	public void startTravel(int interval) {
 		this.travelTimer.cancel();
 		this.travelTimer.purge();
+		this.travelTimer = null;
 		TimerTask traveler = new TimerTask() {
 			public void run() {
 				travel();
@@ -276,7 +293,7 @@ public class SearchBot {
 	private void replan(double[][] changed) {
 		this.travelTimer.cancel();
 		this.travelTimer.purge();
-		this.searched.clear();
+		synchronized (this.searchedLock) { this.searched.clear(); }
 		this.plannedPath.clear();
 		
 		this.search = this.search.replan(changed);

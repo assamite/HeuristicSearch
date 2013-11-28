@@ -19,7 +19,7 @@ import ui.EventHandler;
  *
  */
 public class ADStar extends AbstractSearch {
-	/** Current open list, contains exactly the inconsistent states. */
+	/** Current open list. */
 	protected PriorityQueue<ADNode> open = new PriorityQueue<ADNode>();
 	/** All the nodes generated in the current search. */
 	private HashMap<Integer, ADNode> created = new HashMap<Integer, ADNode>();
@@ -197,12 +197,21 @@ public class ADStar extends AbstractSearch {
 	 */
 	protected void computeShortestPath(ADNode r, ADNode gl) {
 		if (this.open.isEmpty()) return;
+		int i = 0;
+		Node[] publishArray = new Node[2000];
 		
 		print(this.open.peek().getRhs() + " " + r.getRhs());
 		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() < r.getG())) {
 			if (this.isCancelled()) break;
 			ADNode dn = this.open.remove();
-			this.publish(dn);
+			publishArray[i] = dn;
+			if (i == publishArray.length - 1) {
+				this.publish((Object[])publishArray);
+				i = 0;
+			}
+			else {
+				i++;
+			}
 			//print(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1]);
 			//print(dn.getKey()[0] + " " + dn.getKey()[1] + " " + r.getKey()[0] + " " + r.getKey()[1]);
 			
@@ -236,8 +245,12 @@ public class ADStar extends AbstractSearch {
 						n.setRhs(minG + this.getCost(this.map, n.xy));
 						this.updateState(n);
 					}
-				}
-				
+				}		
+			}
+			if (i != 0 && i < publishArray.length - 1) {
+				Node[] a = new Node[i];
+				for (int j = 0; j < i; j++) a[j] = publishArray[j];
+				this.publish((Object[])a);
 			}
 		}
 	}
