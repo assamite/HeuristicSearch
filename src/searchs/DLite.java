@@ -56,7 +56,6 @@ public class DLite extends AbstractSearch {
 			if (o instanceof ArrayList<?>) {
 				try {
 					paths.add((ArrayList<Node>)o); 
-					EventHandler.printInfo("D* Lite found planned path.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!

@@ -104,38 +104,39 @@ public class NaiveAnytime extends AbstractSearch {
 	/** Execute search and publish closed list additions as intermediate 
 	 * results. 
 	 */
-	protected synchronized void search() {	
+	protected synchronized void search() {
+		
 		Node[] publishArray = new Node[2000];
 		
 		while (this.e >= 1.0) {
 			int i = 0;
 			this.robot.clearSearched();
-			try {
-				Thread.sleep(150);
-			}
-			catch (Exception e) {}
+
 			this.open = null;
 			this.open = new PriorityQueue<EpsNode>();
 			this.created = null;
 			this.created = new HashMap<Integer, EpsNode>();
 			 
 			this.rootNode = new EpsNode(this.position, Double.MAX_VALUE / 2, 0, this.e);
-			this.rootNode.setMembership(Node.CLOSED);
-			this.created.put(this.rootNode.getHashKey(), this.rootNode);
-			print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
-
+			//this.rootNode.setMembership(Node.CLOSED);
+			//this.created.put(this.rootNode.getHashKey(), this.rootNode);
 			this.goalNode = new EpsNode(this.goal, 0, this.calcH(this.goal, this.rootNode.xy), this.e);
+			this.goalNode.setMembership(Node.OPEN);
 			this.created.put(this.goalNode.getHashKey(), this.goalNode);
 			this.open.add(this.goalNode);
+			
 			boolean found = false;
+			
+			print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 			print("Epsilon = " + this.e);
 			print("Starting to compute path.");
 			
 			while (!found && !this.open.isEmpty() && !this.isCancelled()) {
 				EpsNode n = this.open.remove();
 				n.setMembership(Node.CLOSED);
+				this.publish(n);
 				
-				if (n.equals(this.rootNode)) { // Searching backwards
+				if (n.getHashKey() == this.rootNode.getHashKey()) { // Searching backwards
 					print("Path computed.");
 					found = true;
 					this.constructPath();
@@ -174,6 +175,7 @@ public class NaiveAnytime extends AbstractSearch {
 						this.created.put(key, c);
 					}
 				}
+				/*
 				publishArray[i] = n;
 				if (i == publishArray.length - 1) {
 					this.publish((Object[])publishArray);
@@ -182,6 +184,7 @@ public class NaiveAnytime extends AbstractSearch {
 				else {
 					i++;
 				}
+				*/
 			}
 			if (found) {
 				if (i != 0 && i < publishArray.length - 1) {
@@ -220,14 +223,8 @@ public class NaiveAnytime extends AbstractSearch {
 			EpsNode n;
 
 			if (xy[0] == this.rootNode.xy[0] && xy[1] == this.rootNode.xy[1]) {
-				print("Root node!");
-				n = this.rootNode;
-				if (an.getG() + this.getCost(this.map, n.xy) < n.getG()) {
-					n.setG(an.getG() + this.getCost(this.map, n.xy));
-					n.prev = an;
-				}
+				n = this.rootNode;	
 			}
-
 			else if (this.created.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.created.get(Node.getHashKeyFor(xy));
  			} 

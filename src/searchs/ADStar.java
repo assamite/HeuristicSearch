@@ -60,10 +60,10 @@ public class ADStar extends AbstractSearch {
 			if (o instanceof ArrayList<?>) {
 				try {
 					paths.add((ArrayList<Node>)o); 
-					EventHandler.printInfo("D* Lite found planned path.");
 				}
 				catch (ClassCastException e) {
 					// Published something else than Node ArrayList!
+					e.printStackTrace();
 				}
 			}
 		}
@@ -126,7 +126,7 @@ public class ADStar extends AbstractSearch {
 			this.robot.clearSearched();
 			print("Epsilon = " + this.e);
 			
-			synchronized (this.robot.positionLock) {
+			synchronized (this) {
 				int key = Node.getHashKeyFor(this.position);
 				if (this.created.containsKey(key)) {
 					this.rootNode = this.created.get(key);
@@ -135,7 +135,7 @@ public class ADStar extends AbstractSearch {
 				}
 			}
 			print("Starting to compute shortest path");
-			this.computeShortestPath(this.rootNode, this.goalNode);
+			this.computeShortestPath();
 			print("Shortest path computed");
 			
 			if (!this.isCancelled()) {
@@ -159,9 +159,7 @@ public class ADStar extends AbstractSearch {
 					}
 				}
 				else if (this.e > 1) {
-					this.e -= 0.5;	
-					
-					
+					this.e -= 0.5;			
 					// Ugh. This is quite stupid, but has to be done so that the
 					// priorities get updated
 					PriorityQueue<ADNode> newPQ = new PriorityQueue<ADNode>();
@@ -190,28 +188,18 @@ public class ADStar extends AbstractSearch {
 	}
 	
 	/**
-	 * Compute shortest path between ADNodes r and gl. Computation is done 
-	 * "backwards", ie. from gl to r.
-	 * @param r current position of the robot, ie. root of the search.
-	 * @param gl robot's goal.
+	 * Compute shortest path between current root and goal.
 	 */
-	protected void computeShortestPath(ADNode r, ADNode gl) {
+	protected void computeShortestPath() {
 		if (this.open.isEmpty()) return;
 		int i = 0;
 		Node[] publishArray = new Node[2000];
 		
-		print(this.open.peek().getRhs() + " " + r.getRhs());
-		while ((this.open.peek().compareTo(r) < 0 || r.getRhs() < r.getG())) {
+		print(this.open.peek().getRhs() + " " + this.rootNode.getRhs());
+		while ((this.open.peek().compareTo(this.rootNode) < 0 || this.rootNode.getRhs() < this.rootNode.getG())) {
 			if (this.isCancelled()) break;
 			ADNode dn = this.open.remove();
-			publishArray[i] = dn;
-			if (i == publishArray.length - 1) {
-				this.publish((Object[])publishArray);
-				i = 0;
-			}
-			else {
-				i++;
-			}
+			this.publish(dn);
 			//print(this.open.size() + " " + dn.xy[0] + " " + dn.xy[1]);
 			//print(dn.getKey()[0] + " " + dn.getKey()[1] + " " + r.getKey()[0] + " " + r.getKey()[1]);
 			
@@ -246,11 +234,6 @@ public class ADStar extends AbstractSearch {
 						this.updateState(n);
 					}
 				}		
-			}
-			if (i != 0 && i < publishArray.length - 1) {
-				Node[] a = new Node[i];
-				for (int j = 0; j < i; j++) a[j] = publishArray[j];
-				this.publish((Object[])a);
 			}
 		}
 	}
@@ -309,11 +292,9 @@ public class ADStar extends AbstractSearch {
 	
 	/** Check is search is currently in goal, i.e. position == goal. */
 	public boolean inGoal() {
-		synchronized (this.robot.positionLock) {
-			if (this.position[0] != this.goal[0]) return false;
-			if (this.position[1] != this.goal[1]) return false;
-			return true;
-		}
+		if (this.position[0] != this.goal[0]) return false;
+		if (this.position[1] != this.goal[1]) return false;
+		return true;
 	}
 	
 	/** Replan the current route with the information of the changed pixels. */

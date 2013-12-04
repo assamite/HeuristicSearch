@@ -49,6 +49,7 @@ public class SearchBot {
 	private AbstractSearch search = null;
 	/** Currenly searched nodes. Maintained here for thread safe UI updating. */
 	private ArrayList<int[]> searched = new ArrayList<int[]>();
+	private ArrayList<int[]> undrawn = new ArrayList<int[]>();
 	/** Timer for traveling the planned path after it has been set. Replanning
 	 * and clearing the search will cancel the timer and setting the planned 
 	 * path (to something else than null) will create new timer and start it. */
@@ -163,9 +164,10 @@ public class SearchBot {
  				e.printStackTrace();
  			}
 			*/
- 			//int idx = this.searchType == SearchType.ASTAR || this.searchType == SearchType.NAIVE_ANYTIME ? path.size() - 1 : 0;
- 			EventHandler.printInfo("Searched to goal " + this.searched.size());
- 			String msg = String.format("To goal: length %d, cost %.5f", 
+ 			String msg = String.format(this.search.getName() + 
+ 					" found path, searched: " + this.searched.size());
+ 			EventHandler.printInfo(msg);
+ 			msg = String.format("Path length %d, cost %.5f", 
  					path.size(), this.getPathCost());
  			EventHandler.updateRobot(this, msg);
  			this.startTravel(100);
@@ -192,19 +194,19 @@ public class SearchBot {
 	public void updateSearched(List<Object> chunks) {
 		synchronized (this.searchedLock) {
 			for (Object o: chunks) {
-				this.searched.add(((Node)o).xy);
+				int[] xy = ((Node)o).xy;
+				this.searched.add(xy);
+				this.undrawn.add(xy);
 			}
 		}
 		EventHandler.updateRobot(this, null);
 	}
 	
-	public void clearSearched() {
+	public synchronized void clearSearched() {
 		System.out.println("Robot: Clearing search.");
-		synchronized(this.searchedLock) {
-			this.searched = new ArrayList<int[]>();
-		}
-		EventHandler.updateRobot(this, null);
-		
+		this.searched.clear();
+		this.undrawn.clear();
+		EventHandler.updateRobot(this, null);	
 	}
 	
 	/** Start searching for path plan. Replanning is done automatically when
@@ -241,7 +243,10 @@ public class SearchBot {
 		this.plannedPath.clear();
 		this.travelTimer.cancel();
 		this.travelTimer.purge();
-		synchronized (this.searchedLock) { this.searched.clear(); }
+		synchronized (this.searchedLock) { 
+			this.searched.clear(); 
+			this.undrawn.clear();
+		}
 		this.isSearchStarted = false;
 	}
 	
@@ -252,6 +257,7 @@ public class SearchBot {
 	 * @params interval Travel interval in milliseconds
 	 */
 	public void startTravel(int interval) {
+		
 		this.travelTimer.cancel();
 		this.travelTimer.purge();
 		this.travelTimer = null;
@@ -271,10 +277,9 @@ public class SearchBot {
 		if (this.plannedPath != null && !this.plannedPath.isEmpty()) {
 			int[] xy = this.plannedPath.remove(0).xy;
 			this.traveledPath.add(xy);
-			synchronized (this.positionLock) { 
-				this.position = xy;
-				this.search.setPosition(xy); 
-			}
+			//synchronized (this.positionLock) 
+			this.position = xy;
+			this.search.setPosition(xy);
 			EventHandler.repaintMap();
 		}
 		else {
@@ -340,10 +345,11 @@ public class SearchBot {
 	 * @param r Raster to draw closed set.
 	 */
 	public synchronized void drawSearched(WritableRaster r) {
-		if (this.searched != null) {
-			for (int[] xy: this.searched) { 
+		if (this.undrawn != null && this.undrawn.size() > 0) {
+			for (int[] xy: this.undrawn) { 
 				r.setPixel(xy[0], xy[1], this.searchedColor);
 			}
+			this.undrawn.clear();
 		}
 	}
 	

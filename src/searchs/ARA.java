@@ -105,7 +105,6 @@ public class ARA extends AbstractSearch {
 	protected void search() {
 		this.open = new PriorityQueue<EpsNode>();
 		this.open.add(this.goalNode);
-		//this.openMap.put(this.goalNode.getHashKey(), this.goalNode);
 		this.improvePath();
 		this.constructPath();
 		this.publish(this.path);
@@ -115,13 +114,11 @@ public class ARA extends AbstractSearch {
 			this.e = this.e - 0.5;
 			print("Epsilon = " + this.e);
 			
-			synchronized (this.robot.positionLock) {
-				int key = Node.getHashKeyFor(this.position);
-				if (this.created.containsKey(key)) {
-					this.rootNode = this.created.get(key);
-					this.rootNode.setH(0.0);
-					print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
-				}
+			int hashKey = Node.getHashKeyFor(this.getPosition());
+			if (this.created.containsKey(hashKey)) {
+				this.rootNode = this.created.get(hashKey);
+				this.rootNode.setH(0.0);
+				print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 			}
 			
 			// Ugh. This is quite stupid, but has to be done so that the
@@ -148,14 +145,7 @@ public class ARA extends AbstractSearch {
 			}
 			this.improvePath();
 			this.constructPath();
-			//if (this.e == 1.0) 
-				this.publish(this.path);
-				
-			// testing
-//			try {
-//				Thread.sleep(150);
-//			}
-//			catch (InterruptedException e) { }
+			this.publish(this.path);
 		}
 		
 		EventHandler.printInfo("ARA* stopped search.");
@@ -230,10 +220,12 @@ public class ARA extends AbstractSearch {
 			EpsNode n;
 			if (xy[0] == this.rootNode.xy[0] && xy[1] == this.rootNode.xy[1]) {
 				n = this.rootNode;
+				/*
 				if (an.getG() + this.getCost(this.map, n.xy) < n.getG()) {
 					n.setG(an.getG() + this.getCost(this.map, n.xy));
 					n.prev = an;
 				}
+				*/
 			}
 			else if (this.created.containsKey(Node.getHashKeyFor(xy))) {
 				n = this.created.get(Node.getHashKeyFor(xy));

@@ -20,6 +20,8 @@ public class AStar extends AbstractSearch {
 	PriorityQueue<Node> open = new PriorityQueue<Node>();
 	/** All created nodes. */
 	HashMap<Integer, Node> created = new HashMap<Integer, Node>();
+	
+	public double e = 1;
 
 	public AStar(SearchBot r) {
 		super(r);
@@ -63,8 +65,8 @@ public class AStar extends AbstractSearch {
 	/** Execute A* search and publish closed list additions as intermediate 
 	 * results. 
 	 */
-	protected synchronized void search() {	
-		Node r = new Node(this.root, 0, this.calcH(this.root, this.goal));
+	protected void search() {	
+		Node r = new Node(this.root, 0, this.calcH(this.root, this.goal) * this.e);
 		open.add(r);
 		this.created.put(r.getHashKey(), r);
 		boolean found = false;
@@ -133,7 +135,7 @@ public class AStar extends AbstractSearch {
 				neighbors[i] = nn;
 			}
 			else {
-				Node nn = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal));
+				Node nn = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal) * this.e);
 				nn.prev = n;
 				neighbors[i] = nn;
 			}
