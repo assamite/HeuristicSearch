@@ -127,6 +127,10 @@ public class DLite extends AbstractSearch {
 			
 		while (!this.inGoal()) {
 			if (this.isCancelled()) break;
+			try {
+				Thread.sleep(150);
+			}
+			catch (Exception e) { }
 			
 			synchronized (this.robot.positionLock) {
 				int key = Node.getHashKeyFor(this.position);

@@ -122,10 +122,16 @@ public class ADStar extends AbstractSearch {
 		this.goalNode.setMembership(Node.OPEN);
 			
 		while (!this.inGoal()) {
+			try {
+				Thread.sleep(150);
+			}
+			catch (Exception e) { }
+			
 			if (this.isCancelled()) break;
 			this.robot.clearSearched();
 			print("Epsilon = " + this.e);
 			
+			/*
 			synchronized (this) {
 				int key = Node.getHashKeyFor(this.position);
 				if (this.created.containsKey(key)) {
@@ -134,6 +140,7 @@ public class ADStar extends AbstractSearch {
 					print("Root: " + this.rootNode.xy[0] +" " + this.rootNode.xy[1]);
 				}
 			}
+			*/
 			print("Starting to compute shortest path");
 			this.computeShortestPath();
 			print("Shortest path computed");
@@ -178,7 +185,7 @@ public class ADStar extends AbstractSearch {
 							an.setMembership(Node.OPEN);
 							this.open.add(an);
 						}
-						else if (an.isClosed()) {
+						else if (an.isClosed()){
 							an.setMembership(Node.VISITED);
 						}
 					}
@@ -196,7 +203,7 @@ public class ADStar extends AbstractSearch {
 		Node[] publishArray = new Node[2000];
 		
 		print(this.open.peek().getRhs() + " " + this.rootNode.getRhs());
-		while ((this.open.peek().compareTo(this.rootNode) < 0 || this.rootNode.getRhs() < this.rootNode.getG())) {
+		while ((this.open.peek().compareTo(this.rootNode) < 0 || this.rootNode.getRhs() != this.rootNode.getG())) {
 			if (this.isCancelled()) break;
 			ADNode dn = this.open.remove();
 			this.publish(dn);
@@ -306,7 +313,7 @@ public class ADStar extends AbstractSearch {
 			DNode d = this.open.remove();
 			d.setMembership(Node.CLOSED);
 		};
-		*/
+		*/ 
 		for (int i: this.created.keySet()) {
 			ADNode dn = this.created.get(i);
 			dn.setH(this.calcH(dn.xy, this.position));

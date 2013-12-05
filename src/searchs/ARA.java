@@ -109,7 +109,12 @@ public class ARA extends AbstractSearch {
 		this.constructPath();
 		this.publish(this.path);
 
-		while (this.e > 1.01) {
+		while (this.e > 1.0) {
+			try {
+				Thread.sleep(150);	
+			}
+			catch (Exception e) { }
+			
 			this.robot.clearSearched();
 			this.e = this.e - 0.5;
 			print("Epsilon = " + this.e);
@@ -163,6 +168,8 @@ public class ARA extends AbstractSearch {
 			//System.out.println(node.xy[0] + " " + node.xy[1] + " " + node.getG() + " " + e*node.getH());
 			node.setMembership(Node.CLOSED);
 			// Publish only in batches.
+			this.publish(node);
+			/*
 			publishArray[i] = node;
 			if (i == publishArray.length - 1) {
 				this.publish((Object[])publishArray);
@@ -171,11 +178,15 @@ public class ARA extends AbstractSearch {
 			else {
 				i++;
 			}
+			*/
 			for (EpsNode n: this.neighbors(node)) {
 				if (n.g > this.getCost(this.map, n.xy) + node.g) {
 					n.g = this.getCost(this.map, n.xy) + node.g;
 					n.prev = node;
 					if (!n.isClosed()) {
+						if (n.isOpen()) {
+							this.open.remove(n);
+						}
 						n.setMembership(Node.OPEN);
 						n.setE(this.e);
 						this.open.add(n);
@@ -186,11 +197,13 @@ public class ARA extends AbstractSearch {
 				}
 			}
 		}
+		/*
 		if (i != 0 && i < publishArray.length - 1) {
 			Node[] a = new Node[i];
 			for (int j = 0; j < i; j++) a[j] = publishArray[j];
 			this.publish((Object[])a);
 		}
+		*/
 		
 	}
 	

@@ -167,9 +167,9 @@ public class SearchBot {
  			String msg = String.format(this.search.getName() + 
  					" found path, searched: " + this.searched.size());
  			EventHandler.printInfo(msg);
- 			msg = String.format("Path length %d, cost %.5f", 
- 					path.size(), this.getPathCost());
- 			EventHandler.updateRobot(this, msg);
+ 			//msg = String.format("Path length %d, cost %.5f", 
+ 			//		path.size(), this.getPathCost());
+ 			//EventHandler.updateRobot(this, msg);
  			this.startTravel(100);
  		}
  		else {

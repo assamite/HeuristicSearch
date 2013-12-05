@@ -54,7 +54,7 @@ public class ADNode extends Node {
 			this.key[1] = this.rhs;
 		}
 		else {
-			this.key[0] = this.g + this.h;
+			this.key[0] = this.g + (this.e * this.h);
 			this.key[1] = this.g;
 		}
 	}

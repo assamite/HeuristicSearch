@@ -21,7 +21,7 @@ public class AStar extends AbstractSearch {
 	/** All created nodes. */
 	HashMap<Integer, Node> created = new HashMap<Integer, Node>();
 	
-	public double e = 1;
+	public double e = 1.0;
 
 	public AStar(SearchBot r) {
 		super(r);
@@ -71,14 +71,19 @@ public class AStar extends AbstractSearch {
 		this.created.put(r.getHashKey(), r);
 		boolean found = false;
 		Node gn = null;	// goal node.
+		double toGoal = Double.MAX_VALUE;
 		
-		while (!found && !this.open.isEmpty() && !this.isCancelled()) {
+		while (!found && this.open.peek().getF() < toGoal && !this.open.isEmpty() && !this.isCancelled()) {
 			Node n = this.open.remove();
+			
 			if (this.isGoal(n)) {
 				found = true;
-				this.constructPath(n);
-				continue;
+				if (n.getF() < toGoal) {
+					toGoal = n.getF();
+					gn = n;
+				}	
 			}
+			this.publish(n);
 			n.setMembership(Node.CLOSED);
 			Node[] childs = this.neighbors(n);
 			for (Node c: childs) {
@@ -98,8 +103,8 @@ public class AStar extends AbstractSearch {
 					}
 					else if (c.isOpen()) {
 						if (c.getG() > n.getG() + cost) {
-							c.setG(n.getG() + cost);
 							this.open.remove(c);
+							c.setG(n.getG() + cost);	
 							this.open.add(c);
 						}
 						
@@ -111,10 +116,9 @@ public class AStar extends AbstractSearch {
 					this.open.add(c);	
 					this.created.put(key, c);
 				}
-			}
-			publish(n);
+			}		
 		}
-		
+		this.constructPath(gn);
 	}
 	
 	/**
@@ -135,7 +139,7 @@ public class AStar extends AbstractSearch {
 				neighbors[i] = nn;
 			}
 			else {
-				Node nn = new Node(xy, ncost + costs[i], this.calcH(xy, this.goal) * this.e);
+				Node nn = new Node(xy, ncost + this.getCost(this.map, xy), this.calcH(xy, this.goal) * this.e);
 				nn.prev = n;
 				neighbors[i] = nn;
 			}

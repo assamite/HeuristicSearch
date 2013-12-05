@@ -26,7 +26,7 @@ import searchs.SearchType;
  */
 public class EventHandler {
 	
-	private static ReentrantLock infoLock = new ReentrantLock();
+	private static Object infoLock = new Object();
 
 	/** Load image map, convert it to gray scale and assemble it to UI. */
 	public static boolean loadMap(File file) {
@@ -86,10 +86,9 @@ public class EventHandler {
 	 * or unexpected behaviour may happen. All printing is done inside infoLock.
 	 * */
 	public static void printInfo(String info) {
-		while (infoLock.isLocked()) { }
-		infoLock.lock();
-		MainUI.util.getInfo().println(info);
-		infoLock.unlock();
+		synchronized (EventHandler.infoLock) {
+			MainUI.util.getInfo().println(info);
+		}
 	}
 	
 	public static void setRobotRoot(int[] point) {
